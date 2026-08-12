@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "38888572550",
+    "firebase_url": "https://pricewatch-apk-default-rtdb.firebaseio.com",
+    "project_id": "pricewatch-apk",
+    "storage_bucket": "pricewatch-apk.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:38888572550:android:3f42eea6706debdd6af307",
+        "android_client_info": {
+          "package_name": "com.example.pricewatch_apk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnvUQvtpOWzgA1Gpfco7SEhEEdxkNlCek"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

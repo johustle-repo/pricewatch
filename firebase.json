@@ -1,0 +1,45 @@
+{
+  "functions": {
+    "source": "functions"
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "pricewatch-apk",
+          "appId": "1:38888572550:android:3f42eea6706debdd6af307",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "pricewatch-apk",
+          "configurations": {
+            "android": "1:38888572550:android:3f42eea6706debdd6af307",
+            "ios": "1:38888572550:ios:307bb2f7f950213f6af307",
+            "macos": "1:38888572550:ios:307bb2f7f950213f6af307",
+            "web": "1:38888572550:web:f22e70336788b1876af307",
+            "windows": "1:38888572550:web:af8d4cba312975816af307"
+          }
+        }
+      }
+    }
+  }
+}

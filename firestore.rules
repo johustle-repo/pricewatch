@@ -1,0 +1,187 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function accessPath() {
+      return /databases/$(database)/documents/access_control/$(request.auth.uid);
+    }
+
+    function hasAccess() {
+      return signedIn() && exists(accessPath());
+    }
+
+    function access() {
+      return get(accessPath()).data;
+    }
+
+    function active() {
+      return hasAccess() && access().active == true;
+    }
+
+    function isRole(role) {
+      return active() && access().role == role;
+    }
+
+    function isAdmin() {
+      return isRole('admin');
+    }
+
+    function isVendor() {
+      return isRole('vendor');
+    }
+
+    function ownsUserId(userId) {
+      return active() && access().user_id == userId;
+    }
+
+    function ownsStoreId(storeId) {
+      return isVendor() && access().store_id == storeId;
+    }
+
+    // The public price board only needs these verified market datasets.
+    match /categories/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /commodities/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /stores/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /price_entries/{id} {
+      allow read: if true;
+      allow create: if isAdmin() ||
+        (isVendor() && request.resource.data.store_id == access().store_id);
+      allow update: if isAdmin() ||
+        (ownsStoreId(resource.data.store_id) &&
+         request.resource.data.store_id == resource.data.store_id);
+      allow delete: if isAdmin() || ownsStoreId(resource.data.store_id);
+    }
+
+    match /users/{id} {
+      allow get: if isAdmin() ||
+        (signedIn() && (resource.data.auth_uid == request.auth.uid ||
+         ((!resource.data.keys().hasAny(['auth_uid']) ||
+           resource.data.auth_uid == null) &&
+          resource.data.email == request.auth.token.email)));
+      allow list: if isAdmin() ||
+        (signedIn() && resource.data.email == request.auth.token.email);
+      allow create: if isAdmin() ||
+        (signedIn() &&
+         request.resource.data.auth_uid == request.auth.uid &&
+         request.resource.data.role == 'user' &&
+         request.resource.data.store_id == null &&
+         !request.resource.data.keys().hasAny(['password_hash']));
+      allow update: if isAdmin() ||
+        (signedIn() &&
+         (!resource.data.keys().hasAny(['auth_uid']) ||
+          resource.data.auth_uid == null) &&
+         resource.data.email == request.auth.token.email &&
+         request.resource.data.auth_uid == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['auth_uid', 'password_hash'])) ||
+        (active() &&
+         resource.data.auth_uid == request.auth.uid &&
+         request.resource.data.auth_uid == resource.data.auth_uid &&
+         request.resource.data.role == resource.data.role &&
+         request.resource.data.store_id == resource.data.store_id &&
+         request.resource.data.id == resource.data.id &&
+         !request.resource.data.keys().hasAny(['password_hash']) &&
+         request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['full_name', 'email'])) ||
+        (active() &&
+         resource.data.auth_uid == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['active', 'deactivated_at']) &&
+         request.resource.data.active == false);
+      allow delete: if isAdmin();
+    }
+
+    match /access_control/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isAdmin() ||
+        (signedIn() &&
+         request.auth.uid == uid &&
+         request.resource.data.uid == uid &&
+         request.resource.data.active == true &&
+         request.resource.data.user_id is int &&
+         request.resource.data.role ==
+           getAfter(/databases/$(database)/documents/users/$(request.resource.data.user_id)).data.role &&
+         ((request.resource.data.role in ['admin', 'user'] &&
+           request.resource.data.store_id == null) ||
+          (request.resource.data.role == 'vendor' &&
+           request.resource.data.store_id ==
+             getAfter(/databases/$(database)/documents/users/$(request.resource.data.user_id)).data.store_id)) &&
+         getAfter(/databases/$(database)/documents/users/$(request.resource.data.user_id)).data.auth_uid == uid &&
+         getAfter(/databases/$(database)/documents/users/$(request.resource.data.user_id)).data.email == request.auth.token.email);
+      allow update: if isAdmin() ||
+        (signedIn() && request.auth.uid == uid &&
+         resource.data.user_id == request.resource.data.user_id &&
+         resource.data.role == request.resource.data.role &&
+         request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['active', 'disabled_at']) &&
+         request.resource.data.active == false);
+      allow delete: if isAdmin();
+    }
+
+    match /watchlists/{id} {
+      allow read: if isAdmin() || ownsUserId(resource.data.user_id);
+      allow create: if ownsUserId(request.resource.data.user_id);
+      allow update: if ownsUserId(resource.data.user_id) &&
+        request.resource.data.user_id == resource.data.user_id;
+      allow delete: if isAdmin() || ownsUserId(resource.data.user_id);
+    }
+
+    match /notifications/{id} {
+      allow read: if isAdmin() || ownsUserId(resource.data.user_id);
+      allow create: if isAdmin() ||
+        ownsUserId(request.resource.data.user_id) ||
+        (isVendor() && request.resource.data.type == 'report_status_update');
+      allow update: if isAdmin() ||
+        (ownsUserId(resource.data.user_id) &&
+         request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['is_read']));
+      allow delete: if isAdmin() || ownsUserId(resource.data.user_id);
+    }
+
+    match /reports/{id} {
+      allow read: if isAdmin() ||
+        ownsUserId(resource.data.user_id) ||
+        ownsStoreId(resource.data.store_id);
+      allow create: if ownsUserId(request.resource.data.user_id) &&
+        request.resource.data.status == 'pending';
+      allow update: if isAdmin() ||
+        (ownsStoreId(resource.data.store_id) &&
+         request.resource.data.user_id == resource.data.user_id &&
+         request.resource.data.store_id == resource.data.store_id &&
+         request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['status', 'updated_at']));
+      allow delete: if isAdmin();
+    }
+
+    match /audit_logs/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    match /deletions/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // Legacy client-side migration metadata and every unknown collection are
+    // intentionally inaccessible. Privileged Cloud Functions use Admin SDK.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
