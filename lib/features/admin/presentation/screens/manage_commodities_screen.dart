@@ -105,15 +105,22 @@ class _ManageCommoditiesScreenState extends State<ManageCommoditiesScreen> {
                       subtitle:
                           'Manage the tracked items used in reports, watchlists, and price monitoring.',
                       icon: Icons.inventory_2_rounded,
+                      webActionAtTop: true,
                       action: webLayout
-                          ? FilledButton.icon(
-                              onPressed: controller.categories.isEmpty
-                                  ? null
-                                  : () => _openCommodityDialog(
-                                      controller.categories,
-                                    ),
-                              icon: const Icon(Icons.add_rounded),
-                              label: const Text('Add commodity'),
+                          ? SizedBox(
+                              width: 220,
+                              child: FilledButton.icon(
+                                onPressed: controller.categories.isEmpty
+                                    ? null
+                                    : () => _openCommodityDialog(
+                                        controller.categories,
+                                      ),
+                                icon: const Icon(Icons.add_rounded),
+                                label: const Text('Add commodity'),
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(48),
+                                ),
+                              ),
                             )
                           : null,
                     ),

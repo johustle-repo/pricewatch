@@ -85,6 +85,12 @@ class MainNavigationScreen extends StatelessWidget {
               matchPrefixes: ['/store/'],
             ),
             const _ShellNavItem(
+              icon: Icons.gpp_bad_rounded,
+              label: 'Vendor Incidents',
+              route: '/incidents',
+              matchPrefixes: ['/incident/'],
+            ),
+            const _ShellNavItem(
               icon: Icons.bookmark_rounded,
               label: 'Watchlist',
               branchIndex: 2,
@@ -110,25 +116,13 @@ class MainNavigationScreen extends StatelessWidget {
         isVendor && size.width >= adminWebLayoutBreakpoint;
     final useCommunityWebShell =
         !isVendor && size.width >= adminWebLayoutBreakpoint;
-    final shellContent = AnimatedSwitcher(
-      duration: const Duration(milliseconds: 280),
-      transitionBuilder: (child, animation) {
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.03),
-              end: Offset.zero,
-            ).animate(animation),
-            child: child,
-          ),
-        );
-      },
-      child: KeyedSubtree(
-        key: ValueKey<int>(navigationShell.currentIndex),
-        child: navigationShell,
-      ),
-    );
+    // StatefulNavigationShell owns nested Navigators with global keys. Keeping
+    // an outgoing copy alive in AnimatedSwitcher duplicates that navigator
+    // render tree during route changes. On web this races MouseTracker and can
+    // leave the destination blank with `_debugDuringDeviceUpdate` assertions.
+    // Render the shell directly; individual pages may animate their own local
+    // content without duplicating the navigation hierarchy.
+    final Widget shellContent = navigationShell;
 
     if (useVendorWebShell) {
       return _VendorWebShell(
@@ -146,12 +140,14 @@ class MainNavigationScreen extends StatelessWidget {
 
     if (useCommunityWebShell) {
       return _VendorWebShell(
+        communityMode: true,
         items: items,
         currentIndex: navigationShell.currentIndex,
         currentLocation: currentLocation,
         userName: user?.fullName ?? 'PriceWatch user',
         roleLabel: _roleLabel(user?.role),
         onNotifications: () => context.go('/notifications'),
+        onPublicView: () => context.go('/'),
         onLogout: () => _logout(context),
         onTap: (item) => _goToItem(context, navigationShell, item),
         child: shellContent,
@@ -184,56 +180,29 @@ class MainNavigationScreen extends StatelessWidget {
 
     final scaffoldKey = GlobalKey<ScaffoldState>();
     final showMobileBar = size.width < 720;
-    final mobileItems = isVendor
-        ? items
-        : items
-              .where(
-                (item) => const [
-                  'Home',
-                  'Products',
-                  'Scan QR',
-                  'Watchlist',
-                  'Profile',
-                ].contains(item.label),
-              )
-              .toList();
-    final selectedMobileIndex = mobileItems.indexWhere(
-      (item) => item.isSelected(currentLocation, navigationShell.currentIndex),
-    );
 
     final mobileScaffold = Scaffold(
       key: scaffoldKey,
-      drawer: showMobileBar
-          ? null
-          : _MobileNavigationDrawer(
-              items: items,
-              userName: user?.fullName ?? 'PriceWatch user',
-              roleLabel: _roleLabel(user?.role),
-              isVendor: isVendor,
-              currentIndex: navigationShell.currentIndex,
-              currentLocation: currentLocation,
-              navSurface: navSurface,
-              navBorder: navBorder,
-              navShadow: navShadow,
-              onLogout: () => _logout(context),
-              onTap: (item) {
-                Navigator.of(context).pop();
-                _goToItem(context, navigationShell, item);
-              },
-            ),
-      body: showMobileBar
-          ? shellContent
-          : AppShellScope(
-              openDrawer: () => scaffoldKey.currentState?.openDrawer(),
-              child: shellContent,
-            ),
-      bottomNavigationBar: showMobileBar
-          ? _CommunityMobileNavigation(
-              items: mobileItems,
-              selectedIndex: selectedMobileIndex < 0 ? 0 : selectedMobileIndex,
-              onTap: (item) => _goToItem(context, navigationShell, item),
-            )
-          : null,
+      drawer: _MobileNavigationDrawer(
+        items: items,
+        userName: user?.fullName ?? 'PriceWatch user',
+        roleLabel: _roleLabel(user?.role),
+        isVendor: isVendor,
+        currentIndex: navigationShell.currentIndex,
+        currentLocation: currentLocation,
+        navSurface: navSurface,
+        navBorder: navBorder,
+        navShadow: navShadow,
+        onLogout: () => _logout(context),
+        onTap: (item) {
+          Navigator.of(context).pop();
+          _goToItem(context, navigationShell, item);
+        },
+      ),
+      body: AppShellScope(
+        openDrawer: () => scaffoldKey.currentState?.openDrawer(),
+        child: shellContent,
+      ),
     );
 
     if (!showMobileBar) {
@@ -266,142 +235,22 @@ class MainNavigationScreen extends StatelessWidget {
     StatefulNavigationShell navigationShell,
     _ShellNavItem item,
   ) {
-    final branchIndex = item.branchIndex;
-    if (branchIndex != null && item.route == null) {
-      navigationShell.goBranch(
-        branchIndex,
-        initialLocation: branchIndex == navigationShell.currentIndex,
-      );
-      return;
-    }
+    // Post-frame callbacks may run alongside MouseTracker's own annotation
+    // refresh. Move the route mutation to the next event-loop turn instead,
+    // after the complete pointer-device update has returned.
+    Future<void>.delayed(Duration.zero, () {
+      if (!context.mounted) return;
+      final branchIndex = item.branchIndex;
+      if (branchIndex != null && item.route == null) {
+        navigationShell.goBranch(
+          branchIndex,
+          initialLocation: branchIndex == navigationShell.currentIndex,
+        );
+        return;
+      }
 
-    context.go(item.route ?? '/modules');
-  }
-}
-
-class _CommunityMobileNavigation extends StatelessWidget {
-  const _CommunityMobileNavigation({
-    required this.items,
-    required this.selectedIndex,
-    required this.onTap,
-  });
-
-  final List<_ShellNavItem> items;
-  final int selectedIndex;
-  final ValueChanged<_ShellNavItem> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceFor(context),
-        border: Border(top: BorderSide(color: AppColors.borderFor(context))),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x180F172A),
-            blurRadius: 20,
-            offset: Offset(0, -6),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 68,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (var index = 0; index < items.length; index++)
-                Expanded(
-                  child: _MobileNavigationItem(
-                    icon: items[index].icon,
-                    label: _mobileLabel(items[index].label),
-                    selected: index == selectedIndex.clamp(0, items.length - 1),
-                    onTap: () => onTap(items[index]),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _mobileLabel(String label) => switch (label) {
-    'Products & Prices' => 'Products',
-    'Scan QR' => 'Scan',
-    'Store QR' => 'QR',
-    _ => label,
-  };
-}
-
-class _MobileNavigationItem extends StatelessWidget {
-  const _MobileNavigationItem({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final foreground = selected
-        ? AppColors.primaryDark
-        : AppColors.textSecondaryFor(context);
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: label,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(2, 6, 2, 5),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 48,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? AppColors.primary.withValues(alpha: .14)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Icon(
-                    icon,
-                    size: selected ? 22 : 21,
-                    color: foreground,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontSize: 10.5,
-                    height: 1,
-                    letterSpacing: 0,
-                    color: foreground,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+      context.go(item.route ?? '/modules');
+    });
   }
 }
 
@@ -461,6 +310,7 @@ class _MobileNavigationDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final drawerItems = items.where((item) => item.label != 'Modules').toList();
     return Drawer(
       backgroundColor: AppColors.backgroundFor(context),
       child: SafeArea(
@@ -531,11 +381,11 @@ class _MobileNavigationDrawer extends StatelessWidget {
                     horizontal: 14,
                     vertical: 6,
                   ),
-                  itemCount: items.length,
+                  itemCount: drawerItems.length,
                   separatorBuilder: (context, index) =>
                       const SizedBox(height: 10),
                   itemBuilder: (context, index) {
-                    final item = items[index];
+                    final item = drawerItems[index];
                     final selected = item.isSelected(
                       currentLocation,
                       currentIndex,
@@ -566,23 +416,27 @@ class _MobileNavigationDrawer extends StatelessWidget {
 
 class _VendorWebShell extends StatelessWidget {
   const _VendorWebShell({
+    this.communityMode = false,
     required this.items,
     required this.currentIndex,
     required this.currentLocation,
     required this.userName,
     required this.roleLabel,
     required this.onNotifications,
+    this.onPublicView,
     required this.onLogout,
     required this.onTap,
     required this.child,
   });
 
+  final bool communityMode;
   final List<_ShellNavItem> items;
   final int currentIndex;
   final String currentLocation;
   final String userName;
   final String roleLabel;
   final VoidCallback onNotifications;
+  final VoidCallback? onPublicView;
   final Future<void> Function() onLogout;
   final ValueChanged<_ShellNavItem> onTap;
   final Widget child;
@@ -635,8 +489,27 @@ class _VendorWebShell extends StatelessWidget {
                           compact: compactSidebar,
                           userName: userName,
                         ),
+                        if (communityMode && !compactSidebar) ...[
+                          const SizedBox(height: 20),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Text(
+                              'COMMUNITY MENU',
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: Colors.white.withValues(alpha: .54),
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.1,
+                                  ),
+                            ),
+                          ),
+                        ],
                         SizedBox(
-                          height: compactHeight ? AppSpacing.lg : AppSpacing.xl,
+                          height: communityMode && !compactSidebar
+                              ? AppSpacing.md
+                              : compactHeight
+                              ? AppSpacing.lg
+                              : AppSpacing.xl,
                         ),
                         Expanded(
                           child: ListView(
@@ -659,6 +532,13 @@ class _VendorWebShell extends StatelessWidget {
                         SizedBox(
                           height: compactHeight ? AppSpacing.sm : AppSpacing.md,
                         ),
+                        if (communityMode && onPublicView != null) ...[
+                          _CommunityPublicViewAction(
+                            compact: compactSidebar,
+                            onPressed: onPublicView!,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                        ],
                         _VendorShellLogout(
                           compact: compactSidebar,
                           onPressed: onLogout,
@@ -669,7 +549,9 @@ class _VendorWebShell extends StatelessWidget {
                   Expanded(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceFor(context),
+                        color: communityMode
+                            ? AppColors.backgroundAltFor(context)
+                            : AppColors.surfaceFor(context),
                         border: Border.all(
                           color: AppColors.borderFor(
                             context,
@@ -687,16 +569,28 @@ class _VendorWebShell extends StatelessWidget {
                       ),
                       child: Column(
                         children: [
-                          _VendorTopBar(
-                            title: _titleForLocation(
-                              currentLocation,
-                              currentIndex,
+                          if (communityMode)
+                            _CommunityTopBar(
+                              title: _titleForLocation(
+                                currentLocation,
+                                currentIndex,
+                              ),
+                              userName: userName,
+                              compact: width < 1160,
+                              onNotifications: onNotifications,
+                              onPublicView: onPublicView,
+                            )
+                          else
+                            _VendorTopBar(
+                              title: _titleForLocation(
+                                currentLocation,
+                                currentIndex,
+                              ),
+                              userName: userName,
+                              roleLabel: roleLabel,
+                              compact: width < 1100,
+                              onNotifications: onNotifications,
                             ),
-                            userName: userName,
-                            roleLabel: roleLabel,
-                            compact: width < 1100,
-                            onNotifications: onNotifications,
-                          ),
                           Expanded(child: child),
                         ],
                       ),
@@ -728,6 +622,9 @@ class _VendorWebShell extends StatelessWidget {
     if (location == '/notifications') return 'Notifications';
     if (location == '/reports' || location.startsWith('/report/')) {
       return 'Reports';
+    }
+    if (location == '/incidents' || location.startsWith('/incident/')) {
+      return 'Vendor Incidents';
     }
     if (location == '/profile' || location.startsWith('/profile/')) {
       return 'Profile';
@@ -807,6 +704,231 @@ class _VendorWebBrand extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CommunityPublicViewAction extends StatelessWidget {
+  const _CommunityPublicViewAction({
+    required this.compact,
+    required this.onPressed,
+  });
+
+  final bool compact;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        height: 48,
+        padding: EdgeInsets.symmetric(horizontal: compact ? 0 : 14),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withValues(alpha: .14)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.monitor_rounded, color: Colors.white, size: 19),
+            if (!compact) ...[
+              const SizedBox(width: 9),
+              const Expanded(
+                child: Text(
+                  'Public price board',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.arrow_outward_rounded,
+                color: Colors.white70,
+                size: 17,
+              ),
+            ],
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _CommunityTopBar extends StatelessWidget {
+  const _CommunityTopBar({
+    required this.title,
+    required this.userName,
+    required this.compact,
+    required this.onNotifications,
+    required this.onPublicView,
+  });
+
+  final String title;
+  final String userName;
+  final bool compact;
+  final VoidCallback onNotifications;
+  final VoidCallback? onPublicView;
+
+  @override
+  Widget build(BuildContext context) {
+    final cleanName = userName.trim();
+    final initial = cleanName.isEmpty ? 'U' : cleanName[0].toUpperCase();
+    return Container(
+      height: 84,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 20 : 28),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceFor(context),
+        border: Border(
+          bottom: BorderSide(
+            color: AppColors.borderFor(context).withValues(alpha: .8),
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'PRICEWATCH',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 15,
+                      color: AppColors.textSecondaryFor(context),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'Community workspace',
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppColors.textSecondaryFor(context),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: AppColors.textPrimaryFor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!compact && onPublicView != null) ...[
+            _TopBarAction(
+              icon: Icons.monitor_rounded,
+              label: 'Public prices',
+              onTap: onPublicView!,
+            ),
+            const SizedBox(width: 10),
+          ],
+          IconButton(
+            tooltip: 'Notifications',
+            onPressed: onNotifications,
+            icon: const Icon(Icons.notifications_none_rounded),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            height: 44,
+            padding: const EdgeInsets.fromLTRB(5, 4, 14, 4),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceMutedFor(context),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.borderFor(context)),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 17,
+                  backgroundColor: AppColors.primary,
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                if (!compact) ...[
+                  const SizedBox(width: 9),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 150),
+                    child: Text(
+                      userName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopBarAction extends StatelessWidget {
+  const _TopBarAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(13),
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceMutedFor(context),
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: AppColors.borderFor(context)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: AppColors.primary),
+            const SizedBox(width: 8),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _VendorTopBar extends StatelessWidget {

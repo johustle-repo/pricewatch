@@ -86,11 +86,19 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                       subtitle:
                           'Create vendor logins only after the shop is verified as a legitimate Lingayen Municipal Market seller. One vendor account should be linked to one shop.',
                       icon: Icons.people_alt_rounded,
+                      webActionAtTop: true,
                       action: webLayout
-                          ? FilledButton.icon(
-                              onPressed: () => _openUserDialog(role: 'vendor'),
-                              icon: const Icon(Icons.storefront_rounded),
-                              label: const Text('Add vendor'),
+                          ? SizedBox(
+                              width: 220,
+                              child: FilledButton.icon(
+                                onPressed: () =>
+                                    _openUserDialog(role: 'vendor'),
+                                icon: const Icon(Icons.storefront_rounded),
+                                label: const Text('Add vendor'),
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(48),
+                                ),
+                              ),
                             )
                           : null,
                       metrics: [

@@ -237,6 +237,36 @@ class MarketPriceTrendPoint {
   final double averageSrp;
 }
 
+class CommodityPriceHistoryPoint {
+  const CommodityPriceHistoryPoint({
+    required this.date,
+    required this.price,
+    required this.storeId,
+    required this.storeName,
+  });
+
+  final DateTime date;
+  final double price;
+  final int storeId;
+  final String storeName;
+}
+
+class CommodityPriceTrend {
+  const CommodityPriceTrend({
+    required this.commodityId,
+    required this.commodityName,
+    required this.unit,
+    required this.srp,
+    required this.history,
+  });
+
+  final int commodityId;
+  final String commodityName;
+  final String unit;
+  final double srp;
+  final List<CommodityPriceHistoryPoint> history;
+}
+
 class ReportViewData {
   const ReportViewData({
     required this.reportId,
@@ -276,10 +306,21 @@ class CategoryPriceAverage {
   const CategoryPriceAverage({
     required this.categoryName,
     required this.averagePrice,
+    required this.averageSrp,
+    required this.priceRecordCount,
+    required this.commodityCount,
   });
 
   final String categoryName;
   final double averagePrice;
+  final double averageSrp;
+  final int priceRecordCount;
+  final int commodityCount;
+
+  double get variance => averagePrice - averageSrp;
+
+  double get variancePercent =>
+      averageSrp == 0 ? 0 : (variance / averageSrp) * 100;
 }
 
 class StatusBreakdown {
@@ -342,6 +383,7 @@ class AdminAnalyticsData {
     required this.statusBreakdown,
     required this.locationInsights,
     required this.marketTrend,
+    required this.commodityPriceTrends,
     required this.aboveSrpCount,
     required this.highestPrice,
     required this.lowestPrice,
@@ -362,6 +404,7 @@ class AdminAnalyticsData {
   final List<StatusBreakdown> statusBreakdown;
   final List<MarketLocationInsight> locationInsights;
   final List<MarketPriceTrendPoint> marketTrend;
+  final List<CommodityPriceTrend> commodityPriceTrends;
   final int aboveSrpCount;
   final double highestPrice;
   final double lowestPrice;

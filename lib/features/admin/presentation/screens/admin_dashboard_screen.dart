@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/utils/app_formatters.dart';
 import '../../../../shared/models/ui_models.dart';
 import '../../../../shared/widgets/adaptive_stat_grid.dart';
 import '../../../../shared/widgets/app_background.dart';
@@ -62,10 +63,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         subtitle:
                             'Overview of reports, tracked items, price activity, and admin shortcuts.',
                         icon: Icons.dashboard_rounded,
-                        action: FilledButton.icon(
-                          onPressed: () => context.go('/admin/reports'),
-                          icon: const Icon(Icons.flag_rounded),
-                          label: const Text('Open reports'),
+                        webActionAtTop: true,
+                        action: SizedBox(
+                          width: webLayout ? 220 : double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: () => context.go('/admin/reports'),
+                            icon: const Icon(Icons.flag_rounded),
+                            label: const Text('Open reports'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size.fromHeight(48),
+                            ),
+                          ),
                         ),
                       ),
                       if (controller.error != null) ...[
@@ -254,6 +262,12 @@ class _OverviewTrendChart extends StatelessWidget {
         child: Center(child: Text('Price history will appear here.')),
       );
     }
+    final values = points
+        .expand((point) => [point.averagePrice, point.averageSrp])
+        .toList();
+    final lowest = values.reduce((a, b) => a < b ? a : b);
+    final highest = values.reduce((a, b) => a > b ? a : b);
+    final yPadding = ((highest - lowest).abs() * .18).clamp(4.0, 80.0);
     return Container(
       height: 290,
       padding: const EdgeInsets.fromLTRB(14, 20, 20, 12),
@@ -266,6 +280,10 @@ class _OverviewTrendChart extends StatelessWidget {
       ),
       child: LineChart(
         LineChartData(
+          minX: 0,
+          maxX: points.length > 1 ? (points.length - 1).toDouble() : 1,
+          minY: (lowest - yPadding).clamp(0, double.infinity),
+          maxY: highest + yPadding,
           borderData: FlBorderData(show: false),
           gridData: FlGridData(
             drawVerticalLine: false,
@@ -282,11 +300,14 @@ class _OverviewTrendChart extends StatelessWidget {
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                interval: points.length > 8 ? 4 : 1,
+                interval: 1,
                 reservedSize: 28,
                 getTitlesWidget: (value, _) {
                   final index = value.toInt();
                   if (index < 0 || index >= points.length) {
+                    return const SizedBox.shrink();
+                  }
+                  if (!_showDateLabel(index, points.length)) {
                     return const SizedBox.shrink();
                   }
                   final date = points[index].date;
@@ -316,11 +337,13 @@ class _OverviewTrendChart extends StatelessWidget {
               points.map((item) => item.averagePrice).toList(),
               const Color(0xFFE11D67),
               true,
+              false,
             ),
             _line(
               points.map((item) => item.averageSrp).toList(),
               AppColors.warning,
               false,
+              true,
             ),
           ],
         ),
@@ -328,21 +351,31 @@ class _OverviewTrendChart extends StatelessWidget {
     );
   }
 
-  LineChartBarData _line(List<double> values, Color color, bool fill) =>
-      LineChartBarData(
-        spots: List.generate(
-          values.length,
-          (index) => FlSpot(index.toDouble(), values[index]),
-        ),
-        isCurved: true,
-        color: color,
-        barWidth: 3,
-        dotData: const FlDotData(show: false),
-        belowBarData: BarAreaData(
-          show: fill,
-          color: color.withValues(alpha: .08),
-        ),
-      );
+  bool _showDateLabel(int index, int length) {
+    if (length <= 5) return true;
+    final step = (length - 1) / 4;
+    return List.generate(5, (item) => (item * step).round()).contains(index);
+  }
+
+  LineChartBarData _line(
+    List<double> values,
+    Color color,
+    bool fill,
+    bool dashed,
+  ) => LineChartBarData(
+    spots: List.generate(
+      values.length,
+      (index) => FlSpot(index.toDouble(), values[index]),
+    ),
+    isCurved: true,
+    curveSmoothness: .22,
+    preventCurveOverShooting: true,
+    color: color,
+    barWidth: 3,
+    dashArray: dashed ? [8, 5] : null,
+    dotData: FlDotData(show: values.length <= 12),
+    belowBarData: BarAreaData(show: fill, color: color.withValues(alpha: .08)),
+  );
 }
 
 class _PreviewInsight extends StatelessWidget {
@@ -691,212 +724,246 @@ class _OperationsSnapshot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final locations = analytics?.locationInsights.take(4).toList() ?? const [];
-    final statuses = analytics?.statusBreakdown ?? const <StatusBreakdown>[];
-    final maxUpdates = locations.isEmpty
-        ? 1
-        : locations
-              .map((item) => item.priceUpdateCount)
-              .reduce((a, b) => a > b ? a : b)
-              .clamp(1, 999999);
-
-    final locationPanel = _SnapshotPanel(
-      title: 'Market coverage',
-      subtitle: 'Most active locations by recorded price updates.',
-      icon: Icons.location_city_outlined,
-      child: locations.isEmpty
-          ? const _SnapshotEmpty('Store city data will appear here.')
-          : Column(
-              children: [
-                for (final item in locations) ...[
-                  _LocationActivityRow(item: item, maxUpdates: maxUpdates),
-                  if (item != locations.last) const SizedBox(height: 12),
-                ],
-              ],
-            ),
-    );
-    final moderationPanel = _SnapshotPanel(
-      title: 'Moderation pipeline',
-      subtitle: 'Current distribution of community report statuses.',
-      icon: Icons.rule_folder_outlined,
-      child: statuses.isEmpty
-          ? const _SnapshotEmpty('Report workflow data will appear here.')
-          : Column(
-              children: [
-                for (final item in statuses) ...[
-                  _StatusPipelineRow(item: item),
-                  if (item != statuses.last) const SizedBox(height: 12),
-                ],
-              ],
-            ),
-    );
+    final categories =
+        analytics?.categoryAverages ?? const <CategoryPriceAverage>[];
+    final highestPrice = categories.fold<double>(1, (highest, item) {
+      final categoryHigh = item.averagePrice > item.averageSrp
+          ? item.averagePrice
+          : item.averageSrp;
+      return categoryHigh > highest ? categoryHigh : highest;
+    });
 
     return AdminSectionCard(
-      title: 'Operations snapshot',
+      title: 'Category price vs SRP',
       subtitle:
-          'Market coverage and moderation workload without leaving the overview.',
+          'Compare the latest category market averages with published suggested retail prices.',
       action: OutlinedButton.icon(
         onPressed: () => context.go('/admin/analytics'),
-        icon: const Icon(Icons.open_in_new_rounded),
-        label: const Text('Explore analytics'),
+        icon: const Icon(Icons.analytics_outlined),
+        label: const Text('Open analytics'),
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) => constraints.maxWidth < 850
-            ? Column(
-                children: [
-                  locationPanel,
-                  const SizedBox(height: 16),
-                  moderationPanel,
-                ],
-              )
-            : Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: locationPanel),
-                  const SizedBox(width: 16),
-                  Expanded(child: moderationPanel),
-                ],
+      child: categories.isEmpty
+          ? const _CategoryComparisonEmpty()
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(
+                  spacing: 18,
+                  runSpacing: 10,
+                  children: const [
+                    _ComparisonLegend(
+                      color: Color(0xFF3B82F6),
+                      label: 'Market average',
+                    ),
+                    _ComparisonLegend(
+                      color: AppColors.warning,
+                      label: 'Average SRP',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final columns = constraints.maxWidth >= 900 ? 2 : 1;
+                    const gap = 14.0;
+                    final width = columns == 1
+                        ? constraints.maxWidth
+                        : (constraints.maxWidth - gap) / 2;
+                    return Wrap(
+                      spacing: gap,
+                      runSpacing: gap,
+                      children: [
+                        for (final item in categories)
+                          SizedBox(
+                            width: width,
+                            child: _CategoryComparisonTile(
+                              item: item,
+                              maxValue: highestPrice,
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class _ComparisonLegend extends StatelessWidget {
+  const _ComparisonLegend({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 10,
+        height: 10,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(3),
+        ),
+      ),
+      const SizedBox(width: 7),
+      Text(label, style: Theme.of(context).textTheme.bodySmall),
+    ],
+  );
+}
+
+class _CategoryComparisonTile extends StatelessWidget {
+  const _CategoryComparisonTile({required this.item, required this.maxValue});
+
+  final CategoryPriceAverage item;
+  final double maxValue;
+
+  @override
+  Widget build(BuildContext context) {
+    final above = item.variance > 0.005;
+    final below = item.variance < -0.005;
+    final varianceColor = above
+        ? AppColors.warning
+        : below
+        ? const Color(0xFF0F9F7A)
+        : AppColors.sky;
+    final varianceLabel = above
+        ? '${item.variancePercent.toStringAsFixed(1)}% above SRP'
+        : below
+        ? '${item.variancePercent.abs().toStringAsFixed(1)}% below SRP'
+        : 'At SRP';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMutedFor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderFor(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  item.categoryName,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                ),
               ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: varianceColor.withValues(alpha: .10),
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(
+                    color: varianceColor.withValues(alpha: .24),
+                  ),
+                ),
+                child: Text(
+                  varianceLabel,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: varianceColor,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          _PriceComparisonBar(
+            label: 'Market',
+            value: item.averagePrice,
+            maxValue: maxValue,
+            color: const Color(0xFF3B82F6),
+          ),
+          const SizedBox(height: 11),
+          _PriceComparisonBar(
+            label: 'SRP',
+            value: item.averageSrp,
+            maxValue: maxValue,
+            color: AppColors.warning,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '${item.commodityCount} commodities • ${item.priceRecordCount} latest store records',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondaryFor(context),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _SnapshotPanel extends StatelessWidget {
-  const _SnapshotPanel({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.child,
+class _PriceComparisonBar extends StatelessWidget {
+  const _PriceComparisonBar({
+    required this.label,
+    required this.value,
+    required this.maxValue,
+    required this.color,
   });
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Widget child;
 
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: AppColors.surfaceMutedFor(context),
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: AppColors.borderFor(context)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: AppColors.primaryDark, size: 21),
-            const SizedBox(width: 9),
-            Expanded(
-              child: Text(
-                title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 5),
-        Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-        const SizedBox(height: 18),
-        child,
-      ],
-    ),
-  );
-}
-
-class _LocationActivityRow extends StatelessWidget {
-  const _LocationActivityRow({required this.item, required this.maxUpdates});
-  final MarketLocationInsight item;
-  final int maxUpdates;
+  final String label;
+  final double value;
+  final double maxValue;
+  final Color color;
 
   @override
   Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Row(
         children: [
+          SizedBox(
+            width: 54,
+            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+          ),
           Expanded(
-            child: Text(
-              item.location,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelLarge,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: LinearProgressIndicator(
+                value: (value / maxValue).clamp(0.0, 1.0),
+                minHeight: 9,
+                color: color,
+                backgroundColor: AppColors.borderFor(context),
+              ),
             ),
           ),
-          Text('${item.priceUpdateCount} updates'),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 78,
+            child: Text(
+              AppFormatters.currency(value),
+              textAlign: TextAlign.right,
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
         ],
-      ),
-      const SizedBox(height: 7),
-      LinearProgressIndicator(
-        value: item.priceUpdateCount / maxUpdates,
-        minHeight: 7,
-        borderRadius: BorderRadius.circular(99),
-        color: AppColors.primary,
-        backgroundColor: AppColors.borderFor(context),
       ),
     ],
   );
 }
 
-class _StatusPipelineRow extends StatelessWidget {
-  const _StatusPipelineRow({required this.item});
-  final StatusBreakdown item;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (item.status) {
-      'resolved' => const Color(0xFF0F9F7A),
-      'reviewed' => AppColors.sky,
-      _ => AppColors.warning,
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceFor(context),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderFor(context)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 9,
-            height: 9,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              item.status.toUpperCase(),
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-          ),
-          Text(
-            '${item.count}',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SnapshotEmpty extends StatelessWidget {
-  const _SnapshotEmpty(this.message);
-  final String message;
+class _CategoryComparisonEmpty extends StatelessWidget {
+  const _CategoryComparisonEmpty();
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 24),
     child: Center(
       child: Text(
-        message,
+        'Category comparisons will appear after price records are added.',
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.bodySmall,
       ),

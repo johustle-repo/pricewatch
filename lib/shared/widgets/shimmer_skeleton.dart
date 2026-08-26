@@ -79,49 +79,72 @@ class SkeletonBox extends StatelessWidget {
 }
 
 class ListLoadingView extends StatelessWidget {
-  const ListLoadingView({super.key, this.cardCount = 5});
+  const ListLoadingView({
+    super.key,
+    this.cardCount = 5,
+    this.shrinkWrap = false,
+  });
 
   final int cardCount;
+  final bool shrinkWrap;
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: cardCount,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: const Row(
-          children: [
-            SkeletonBox(height: 60, width: 60, radius: 20),
-            SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SkeletonBox(height: 16, width: 150),
-                  SizedBox(height: 10),
-                  SkeletonBox(height: 12, width: 110),
-                ],
-              ),
-            ),
-            SizedBox(width: 14),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+    Widget loadingCard() => Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: const Row(
+        children: [
+          SkeletonBox(height: 60, width: 60, radius: 20),
+          SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SkeletonBox(height: 16, width: 56),
+                SkeletonBox(height: 16, width: 150),
                 SizedBox(height: 10),
-                SkeletonBox(height: 12, width: 44),
+                SkeletonBox(height: 12, width: 110),
               ],
             ),
-          ],
-        ),
+          ),
+          SizedBox(width: 14),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              SkeletonBox(height: 16, width: 56),
+              SizedBox(height: 10),
+              SkeletonBox(height: 12, width: 44),
+            ],
+          ),
+        ],
       ),
+    );
+
+    final content = Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var index = 0; index < cardCount; index++) ...[
+            loadingCard(),
+            if (index != cardCount - 1) const SizedBox(height: 12),
+          ],
+        ],
+      ),
+    );
+
+    if (shrinkWrap) {
+      return content;
+    }
+
+    return SingleChildScrollView(
+      primary: false,
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: content,
     );
   }
 }

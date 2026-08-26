@@ -330,7 +330,7 @@ class _PublicPriceCard extends StatelessWidget {
         : item.isBelowSrp
         ? 'Below SRP'
         : 'At SRP';
-    final prices = [item.previousPrice, item.currentPrice];
+    final prices = [item.previousPrice, item.currentPrice, item.srp];
     final minPrice = prices.reduce((a, b) => a < b ? a : b);
     final maxPrice = prices.reduce((a, b) => a > b ? a : b);
     final padding = ((maxPrice - minPrice) * .2).clamp(2.0, 25.0);
@@ -437,29 +437,41 @@ class _PublicPriceCard extends StatelessWidget {
               const Spacer(),
               if (!dense)
                 SizedBox(
-                  height: 34,
+                  height: 44,
                   child: LineChart(
                     LineChartData(
                       minY: minPrice - padding,
                       maxY: maxPrice + padding,
+                      minX: 0,
+                      maxX: 1,
+                      clipData: const FlClipData.all(),
                       gridData: const FlGridData(show: false),
                       titlesData: const FlTitlesData(show: false),
                       borderData: FlBorderData(show: false),
                       lineTouchData: const LineTouchData(enabled: false),
                       lineBarsData: [
                         LineChartBarData(
+                          spots: [FlSpot(0, item.srp), FlSpot(1, item.srp)],
+                          isCurved: false,
+                          color: AppColors.textSecondaryFor(
+                            context,
+                          ).withValues(alpha: .6),
+                          barWidth: 1,
+                          dashArray: [4, 4],
+                          dotData: const FlDotData(show: false),
+                        ),
+                        LineChartBarData(
                           spots: [
                             FlSpot(0, item.previousPrice),
                             FlSpot(1, item.currentPrice),
-                            FlSpot(2, item.currentPrice),
                           ],
-                          isCurved: true,
+                          isCurved: false,
                           color: trendColor,
-                          barWidth: 2.5,
-                          dotData: const FlDotData(show: false),
+                          barWidth: 2.75,
+                          dotData: const FlDotData(show: true),
                           belowBarData: BarAreaData(
                             show: true,
-                            color: trendColor.withValues(alpha: .07),
+                            color: trendColor.withValues(alpha: .09),
                           ),
                         ),
                       ],
@@ -467,12 +479,24 @@ class _PublicPriceCard extends StatelessWidget {
                   ),
                 ),
               if (!dense) const SizedBox(height: 2),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  AppFormatters.dateTime(item.recordedAt),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+              Row(
+                children: [
+                  Text(
+                    'Previous',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.textSecondaryFor(context),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'Latest • ${AppFormatters.dateTime(item.recordedAt)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.textSecondaryFor(context),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

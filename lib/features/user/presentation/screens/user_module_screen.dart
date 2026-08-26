@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../shared/widgets/app_background.dart';
@@ -125,67 +124,79 @@ class _BuyerWebDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(30, 28, 30, 48),
-      children: [
-        _BuyerWebHero(firstName: firstName),
-        const SizedBox(height: 24),
-        const _BuyerJourneyStrip(),
-        const SizedBox(height: 28),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = constraints.maxWidth > 1500
+            ? (constraints.maxWidth - 1440) / 2
+            : 30.0;
+        return ListView(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            28,
+            horizontalPadding,
+            48,
+          ),
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _WebSectionHeading(
-                    eyebrow: 'COMMUNITY SERVICES',
-                    title: 'What would you like to do?',
-                    subtitle:
-                        'Use verified market information and community tools in one workspace.',
+            _BuyerWebHero(firstName: firstName),
+            const SizedBox(height: 24),
+            const _BuyerJourneyStrip(),
+            const SizedBox(height: 28),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _WebSectionHeading(
+                        eyebrow: 'COMMUNITY SERVICES',
+                        title: 'What would you like to do?',
+                        subtitle:
+                            'Use verified market information and community tools in one workspace.',
+                      ),
+                      const SizedBox(height: 16),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          const gap = 14.0;
+                          final width = (constraints.maxWidth - gap) / 2;
+                          return Wrap(
+                            spacing: gap,
+                            runSpacing: gap,
+                            children: [
+                              for (final module in modules)
+                                SizedBox(
+                                  width: width,
+                                  child: _BuyerWebServiceCard(
+                                    module: module,
+                                    onTap: () => context.go(module.route),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      const gap = 14.0;
-                      final width = (constraints.maxWidth - gap) / 2;
-                      return Wrap(
-                        spacing: gap,
-                        runSpacing: gap,
-                        children: [
-                          for (final module in modules)
-                            SizedBox(
-                              width: width,
-                              child: _BuyerWebServiceCard(
-                                module: module,
-                                onTap: () => context.go(module.route),
-                              ),
-                            ),
-                        ],
-                      );
-                    },
+                ),
+                const SizedBox(width: 24),
+                SizedBox(
+                  width: 330,
+                  child: Column(
+                    children: [
+                      const _BuyerTrustPanel(),
+                      const SizedBox(height: 16),
+                      _BuyerReportPanel(
+                        onScan: () => context.go('/scan-qr'),
+                        onReports: () => context.go('/reports'),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 24),
-            SizedBox(
-              width: 330,
-              child: Column(
-                children: [
-                  const _BuyerTrustPanel(),
-                  const SizedBox(height: 16),
-                  _BuyerReportPanel(
-                    onScan: () => context.go('/scan-qr'),
-                    onReports: () => context.go('/reports'),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -668,6 +679,12 @@ class _BuyerReportPanel extends StatelessWidget {
         icon: const Icon(Icons.flag_outlined),
         label: const Text('View my reports'),
       ),
+      const SizedBox(height: 9),
+      OutlinedButton.icon(
+        onPressed: () => context.go('/incident/new'),
+        icon: const Icon(Icons.gpp_bad_outlined),
+        label: const Text('Report suspicious vendor'),
+      ),
     ],
   );
 }
@@ -785,6 +802,14 @@ const List<_BuyerModule> _buyerModules = [
     route: '/watchlist',
     icon: Icons.bookmark_rounded,
     color: AppColors.primarySoft,
+  ),
+  _BuyerModule(
+    title: 'Vendor Incidents',
+    description:
+        'Report suspicious or bogus vendors with photo evidence for admin review.',
+    route: '/incidents',
+    icon: Icons.gpp_bad_rounded,
+    color: AppColors.warning,
   ),
 ];
 

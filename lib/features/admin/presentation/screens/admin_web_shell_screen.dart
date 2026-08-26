@@ -225,6 +225,13 @@ class AdminWebShellScreen extends StatelessWidget {
                                   currentLocation: currentLocation,
                                 ),
                                 _AdminShellItem(
+                                  label: 'Incidents',
+                                  route: '/admin/incidents',
+                                  icon: Icons.gpp_bad_rounded,
+                                  compact: compactSidebar,
+                                  currentLocation: currentLocation,
+                                ),
+                                _AdminShellItem(
                                   label: 'Analytics',
                                   route: '/admin/analytics',
                                   icon: Icons.query_stats_rounded,
@@ -319,6 +326,9 @@ class AdminWebShellScreen extends StatelessWidget {
     if (route.startsWith('/admin/reports')) {
       return 'Reports';
     }
+    if (route.startsWith('/admin/incidents')) {
+      return 'Vendor Incidents';
+    }
     if (route.startsWith('/admin/analytics')) {
       return 'Analytics';
     }
@@ -330,6 +340,9 @@ class AdminWebShellScreen extends StatelessWidget {
       return 'Overview';
     }
     if (route.startsWith('/admin/reports')) {
+      return 'Moderation';
+    }
+    if (route.startsWith('/admin/incidents')) {
       return 'Moderation';
     }
     if (route.startsWith('/admin/analytics')) {

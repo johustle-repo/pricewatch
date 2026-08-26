@@ -77,11 +77,18 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
                       subtitle:
                           'Manage the category list used across PriceWatch.',
                       icon: Icons.category_rounded,
+                      webActionAtTop: true,
                       action: webLayout
-                          ? FilledButton.icon(
-                              onPressed: () => _openCategoryDialog(),
-                              icon: const Icon(Icons.add_rounded),
-                              label: const Text('Add category'),
+                          ? SizedBox(
+                              width: 220,
+                              child: FilledButton.icon(
+                                onPressed: () => _openCategoryDialog(),
+                                icon: const Icon(Icons.add_rounded),
+                                label: const Text('Add category'),
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(48),
+                                ),
+                              ),
                             )
                           : null,
                     ),

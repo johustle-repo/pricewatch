@@ -24,6 +24,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>PriceWatch uses the camera to capture photo evidence for vendor incident reports.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>PriceWatch uses your photo library when you choose evidence for a vendor incident report.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

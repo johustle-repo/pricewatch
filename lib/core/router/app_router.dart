@@ -29,6 +29,7 @@ import '../../features/reports/presentation/screens/add_report_screen.dart';
 import '../../features/reports/presentation/screens/report_detail_screen.dart';
 import '../../features/reports/presentation/screens/report_list_screen.dart';
 import '../../features/reports/presentation/screens/store_qr_scanner_screen.dart';
+import '../../features/reports/presentation/screens/vendor_incident_screens.dart';
 import '../../features/stores/presentation/screens/store_detail_screen.dart';
 import '../../features/stores/presentation/screens/store_list_screen.dart';
 import '../../features/user/presentation/screens/user_module_screen.dart';
@@ -240,6 +241,16 @@ class AppRouter {
                       return ReportDetailScreen(reportId: reportId);
                     },
                   ),
+                  GoRoute(
+                    path: '/incidents',
+                    builder: (context, state) =>
+                        const VendorIncidentListScreen(),
+                  ),
+                  GoRoute(
+                    path: '/incident/new',
+                    builder: (context, state) =>
+                        const AddVendorIncidentScreen(),
+                  ),
                 ],
               ),
               StatefulShellBranch(
@@ -297,6 +308,11 @@ class AppRouter {
                 builder: (context, state) => const ManageReportsScreen(),
               ),
               GoRoute(
+                path: '/admin/incidents',
+                builder: (context, state) =>
+                    const VendorIncidentListScreen(adminMode: true),
+              ),
+              GoRoute(
                 path: '/admin/analytics',
                 builder: (context, state) => const AnalyticsScreen(),
               ),
@@ -316,6 +332,8 @@ class AppRouter {
     '/watchlist',
     '/reports',
     '/report/new',
+    '/incidents',
+    '/incident/new',
     '/scan-qr',
     '/notifications',
     '/profile',

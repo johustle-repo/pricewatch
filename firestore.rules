@@ -170,6 +170,22 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /vendor_incidents/{id} {
+      allow read: if isAdmin() || ownsUserId(resource.data.user_id);
+      allow create: if ownsUserId(request.resource.data.user_id) &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.reported_vendor_name is string &&
+        request.resource.data.reported_vendor_name.size() >= 2 &&
+        request.resource.data.market_location is string &&
+        request.resource.data.market_location.size() >= 5 &&
+        request.resource.data.details is string &&
+        request.resource.data.details.size() >= 20 &&
+        request.resource.data.evidence_photos is list &&
+        request.resource.data.evidence_photos.size() >= 1 &&
+        request.resource.data.evidence_photos.size() <= 3;
+      allow update, delete: if isAdmin();
+    }
+
     match /audit_logs/{id} {
       allow read, write: if isAdmin();
     }

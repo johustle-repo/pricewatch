@@ -13,6 +13,7 @@ class AdminPageHeader extends StatelessWidget {
     this.eyebrow,
     this.icon = Icons.dashboard_customize_rounded,
     this.action,
+    this.webActionAtTop = false,
     this.metrics = const [],
   });
 
@@ -21,6 +22,7 @@ class AdminPageHeader extends StatelessWidget {
   final String? eyebrow;
   final IconData icon;
   final Widget? action;
+  final bool webActionAtTop;
   final List<Widget> metrics;
 
   @override
@@ -126,6 +128,17 @@ class AdminPageHeader extends StatelessWidget {
               ),
             ],
           );
+
+          if (webLayout && action != null && webActionAtTop) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: content),
+                const SizedBox(width: AppSpacing.xl),
+                action!,
+              ],
+            );
+          }
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,6 +254,7 @@ class AdminSectionCard extends StatelessWidget {
       borderColor: AppColors.isDark(context) ? null : const Color(0xFFE2E8F0),
       shadowColor: AppColors.isDark(context) ? null : const Color(0x140F172A),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Builder(

@@ -10,6 +10,7 @@ import '../../features/home/data/home_repository.dart';
 import '../../features/notifications/data/notification_repository.dart';
 import '../../features/profile/data/profile_repository.dart';
 import '../../features/reports/data/report_repository.dart';
+import '../../features/reports/data/vendor_incident_repository.dart';
 import '../../features/stores/data/store_repository.dart';
 import '../../features/watchlist/data/watchlist_repository.dart';
 import '../database/cloud_data_service.dart';
@@ -27,6 +28,7 @@ class AppDependencies {
     required this.marketDisplayRepository,
     required this.watchlistRepository,
     required this.reportRepository,
+    required this.vendorIncidentRepository,
     required this.notificationRepository,
     required this.profileRepository,
     required this.adminRepository,
@@ -41,6 +43,7 @@ class AppDependencies {
   final MarketDisplayRepository marketDisplayRepository;
   final WatchlistRepository watchlistRepository;
   final ReportRepository reportRepository;
+  final VendorIncidentRepository vendorIncidentRepository;
   final NotificationRepository notificationRepository;
   final ProfileRepository profileRepository;
   final AdminRepository adminRepository;
@@ -75,6 +78,9 @@ class AppDependencies {
         cloudDataService: cloudDataService,
       ),
       reportRepository: ReportRepository(cloudDataService: cloudDataService),
+      vendorIncidentRepository: VendorIncidentRepository(
+        cloudDataService: cloudDataService,
+      ),
       notificationRepository: NotificationRepository(
         cloudDataService: cloudDataService,
       ),

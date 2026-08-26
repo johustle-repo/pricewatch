@@ -113,70 +113,84 @@ class _ManagePricesScreenState extends State<ManagePricesScreen> {
                         subtitle:
                             'Import, review, and export synchronized commodity price records.',
                         icon: Icons.price_change_rounded,
-                        action: Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [
-                            OutlinedButton.icon(
-                              onPressed: controller.isLoading
-                                  ? null
-                                  : _uploadPriceCsv,
-                              icon: const Icon(Icons.upload_file_rounded),
-                              label: const Text('Upload price CSV'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                disabledForegroundColor: Colors.white60,
-                                side: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.72),
-                                ),
-                                backgroundColor: Colors.white.withValues(
-                                  alpha: 0.06,
-                                ),
-                              ),
-                            ),
-                            PopupMenuButton<String>(
-                              tooltip: 'Export price register',
-                              onSelected: _exportPrices,
-                              itemBuilder: (_) => const [
-                                PopupMenuItem(
-                                  value: 'pdf',
-                                  child: Text('Export PDF'),
-                                ),
-                                PopupMenuItem(
-                                  value: 'xlsx',
-                                  child: Text('Export Excel'),
-                                ),
-                              ],
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 18,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primaryDark,
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.download_rounded,
-                                      color: Colors.white,
-                                      size: 18,
-                                    ),
-                                    SizedBox(width: 7),
-                                    Text(
-                                      'Export',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700,
+                        webActionAtTop: true,
+                        action: Align(
+                          alignment: webLayout
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: SizedBox(
+                            width: webLayout ? 230 : double.infinity,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: controller.isLoading
+                                      ? null
+                                      : _uploadPriceCsv,
+                                  icon: const Icon(Icons.upload_file_rounded),
+                                  label: const Text('Upload price CSV'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    disabledForegroundColor: Colors.white60,
+                                    side: BorderSide(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.72,
                                       ),
                                     ),
-                                  ],
+                                    backgroundColor: Colors.white.withValues(
+                                      alpha: 0.06,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(height: 10),
+                                PopupMenuButton<String>(
+                                  tooltip: 'Export price register',
+                                  onSelected: _exportPrices,
+                                  itemBuilder: (_) => const [
+                                    PopupMenuItem(
+                                      value: 'pdf',
+                                      child: Text('Export PDF'),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'xlsx',
+                                      child: Text('Export Excel'),
+                                    ),
+                                  ],
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 18,
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryDark,
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.download_rounded,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
+                                        SizedBox(width: 7),
+                                        Text(
+                                          'Export',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                         metrics: [
                           AdminHeaderMetric(

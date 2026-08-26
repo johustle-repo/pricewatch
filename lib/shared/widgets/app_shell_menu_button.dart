@@ -42,13 +42,8 @@ class AppShellMenuButton extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(left: 6),
       child: Material(
-        color: AppColors.surfaceFor(
-          context,
-        ).withValues(alpha: AppColors.isDark(context) ? 0.92 : 0.96),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: BorderSide(color: AppColors.borderFor(context)),
-        ),
+        color: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         elevation: 0,
         child: InkWell(
           borderRadius: BorderRadius.circular(14),

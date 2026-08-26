@@ -96,49 +96,52 @@ class _ManageReportsScreenState extends State<ManageReportsScreen> {
                       subtitle:
                           'Review overpricing complaints, check observed values against SRP snapshots, and keep reporters informed.',
                       icon: Icons.flag_rounded,
-                      action: PopupMenuButton<String>(
-                        tooltip: 'Export filtered reports',
-                        onSelected: (format) => _export(format, filtered),
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(
-                            value: 'pdf',
-                            child: Text('Export PDF'),
-                          ),
-                          PopupMenuItem(
-                            value: 'xlsx',
-                            child: Text('Export Excel'),
-                          ),
-                          PopupMenuItem(
-                            value: 'csv',
-                            child: Text('Export CSV'),
-                          ),
-                        ],
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryDark,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.download_rounded,
-                                color: Colors.white,
-                                size: 19,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Export reports',
-                                style: TextStyle(
+                      webActionAtTop: true,
+                      action: SizedBox(
+                        width: webLayout ? 220 : double.infinity,
+                        child: PopupMenuButton<String>(
+                          tooltip: 'Export filtered reports',
+                          onSelected: (format) => _export(format, filtered),
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(
+                              value: 'pdf',
+                              child: Text('Export PDF'),
+                            ),
+                            PopupMenuItem(
+                              value: 'xlsx',
+                              child: Text('Export Excel'),
+                            ),
+                            PopupMenuItem(
+                              value: 'csv',
+                              child: Text('Export CSV'),
+                            ),
+                          ],
+                          child: Container(
+                            width: double.infinity,
+                            height: 48,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryDark,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.download_rounded,
                                   color: Colors.white,
-                                  fontWeight: FontWeight.w700,
+                                  size: 19,
                                 ),
-                              ),
-                            ],
+                                SizedBox(width: 8),
+                                Text(
+                                  'Export reports',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -331,6 +334,8 @@ class _ReportsTable extends StatelessWidget {
       ],
       rows: reports.map((report) {
         final variance = report.observedPrice - report.srpSnapshot;
+        final varianceLabel =
+            '${variance >= 0 ? '+' : '−'}₱${variance.abs().toStringAsFixed(2)}';
         final varianceColor = variance > 0
             ? AppColors.warning
             : AppColors.primaryDark;
@@ -384,26 +389,40 @@ class _ReportsTable extends StatelessWidget {
             ),
             DataCell(
               Text(
-                AppFormatters.currency(report.observedPrice),
-                style: const TextStyle(fontWeight: FontWeight.w800),
+                '₱${report.observedPrice.toStringAsFixed(2)}',
+                maxLines: 1,
+                softWrap: false,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11.5,
+                ),
               ),
             ),
-            DataCell(Text(AppFormatters.currency(report.srpSnapshot))),
+            DataCell(
+              Text(
+                '₱${report.srpSnapshot.toStringAsFixed(2)}',
+                maxLines: 1,
+                softWrap: false,
+                style: const TextStyle(fontSize: 11.5),
+              ),
+            ),
             DataCell(
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 7,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                 decoration: BoxDecoration(
                   color: varianceColor.withValues(alpha: .10),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  AppFormatters.signedCurrency(variance),
+                  varianceLabel,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.visible,
                   style: TextStyle(
                     color: varianceColor,
                     fontWeight: FontWeight.w800,
+                    fontSize: 10.5,
+                    height: 1,
                   ),
                 ),
               ),

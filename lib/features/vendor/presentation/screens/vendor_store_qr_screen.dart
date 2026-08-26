@@ -404,7 +404,7 @@ class _PosterPreview extends StatelessWidget {
                 key: posterKey,
                 child: AspectRatio(
                   aspectRatio: 210 / 297,
-                  child: _A4Poster(store: store, qrData: qrData),
+                  child: StoreQrA4Poster(store: store, qrData: qrData),
                 ),
               ),
             ),
@@ -415,8 +415,8 @@ class _PosterPreview extends StatelessWidget {
   }
 }
 
-class _A4Poster extends StatelessWidget {
-  const _A4Poster({required this.store, required this.qrData});
+class StoreQrA4Poster extends StatelessWidget {
+  const StoreQrA4Poster({super.key, required this.store, required this.qrData});
   final StoreModel store;
   final String? qrData;
 

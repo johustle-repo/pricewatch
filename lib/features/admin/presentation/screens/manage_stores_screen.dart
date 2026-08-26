@@ -16,6 +16,7 @@ import '../../../../shared/widgets/app_background.dart';
 import '../../../../shared/widgets/app_surface_card.dart';
 import '../../../../shared/widgets/empty_state_view.dart';
 import '../../../../shared/widgets/shimmer_skeleton.dart';
+import '../../../vendor/presentation/screens/vendor_store_qr_screen.dart';
 import '../controllers/admin_controller.dart';
 import '../../data/csv_file_picker.dart';
 import '../../data/csv_import_service.dart';
@@ -103,6 +104,7 @@ class _ManageStoresScreenState extends State<ManageStoresScreen> {
                       subtitle:
                           'Verify legitimate sellers in Lingayen Municipal Market, maintain one shop record per vendor, and show each shop QR code for buyer reports.',
                       icon: Icons.storefront_rounded,
+                      webActionAtTop: true,
                       action: webLayout
                           ? SizedBox(
                               width: 280,
@@ -703,9 +705,12 @@ class _ManageStoresScreenState extends State<ManageStoresScreen> {
                             width: cardWidth,
                             child: RepaintBoundary(
                               key: exportKey,
-                              child: _StoreQrExportCard(
-                                store: store,
-                                qrData: qrData,
+                              child: AspectRatio(
+                                aspectRatio: 210 / 297,
+                                child: StoreQrA4Poster(
+                                  store: store,
+                                  qrData: qrData,
+                                ),
                               ),
                             ),
                           ),
@@ -750,14 +755,16 @@ class _ManageStoresScreenState extends State<ManageStoresScreen> {
   }
 
   String? _qrDataFor(StoreModel store) {
+    // Match the vendor workspace: a persisted store always uses the canonical
+    // current store payload, even when an older qrCode value is still stored.
+    if (store.id != null) {
+      return StoreQrCodec.encode(store);
+    }
     final stored = store.qrCode?.trim();
     if (stored != null && stored.isNotEmpty) {
       return stored;
     }
-    if (store.id == null) {
-      return null;
-    }
-    return StoreQrCodec.encode(store);
+    return null;
   }
 
   Future<void> _downloadQrCard(GlobalKey key, StoreModel store) async {
@@ -957,6 +964,8 @@ class _StoresTable extends StatelessWidget {
   }
 }
 
+// Kept temporarily for backward-compatible previews created by older routes.
+// ignore: unused_element
 class _StoreQrExportCard extends StatelessWidget {
   const _StoreQrExportCard({required this.store, required this.qrData});
 

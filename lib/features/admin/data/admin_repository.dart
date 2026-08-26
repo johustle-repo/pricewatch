@@ -710,6 +710,8 @@ class AdminRepository {
       );
     }
     final categoryBuckets = <int, List<double>>{};
+    final categorySrpBuckets = <int, List<double>>{};
+    final categoryCommodityIds = <int, Set<int>>{};
     for (final entry in latestByStoreCommodity.values) {
       final commodity = commodities
           .where((item) => item.id == entry.commodityId)
@@ -720,6 +722,15 @@ class AdminRepository {
       categoryBuckets
           .putIfAbsent(commodity.categoryId, () => [])
           .add(entry.price);
+      categorySrpBuckets
+          .putIfAbsent(commodity.categoryId, () => [])
+          .add(commodity.srp);
+      final commodityId = commodity.id;
+      if (commodityId != null) {
+        categoryCommodityIds
+            .putIfAbsent(commodity.categoryId, () => <int>{})
+            .add(commodityId);
+      }
     }
     final categoryAverages =
         categoryBuckets.entries
@@ -732,9 +743,16 @@ class AdminRepository {
               }
               final avg =
                   entry.value.reduce((a, b) => a + b) / entry.value.length;
+              final srpValues = categorySrpBuckets[entry.key] ?? const [];
+              final averageSrp = srpValues.isEmpty
+                  ? 0.0
+                  : srpValues.reduce((a, b) => a + b) / srpValues.length;
               return CategoryPriceAverage(
                 categoryName: category.name,
                 averagePrice: avg,
+                averageSrp: averageSrp,
+                priceRecordCount: entry.value.length,
+                commodityCount: categoryCommodityIds[entry.key]?.length ?? 0,
               );
             })
             .nonNulls
@@ -792,6 +810,41 @@ class AdminRepository {
     final commodityById = {
       for (final commodity in commodities) commodity.id: commodity,
     };
+    final storeById = {for (final store in stores) store.id: store};
+    final historyByCommodity = <int, List<CommodityPriceHistoryPoint>>{};
+    for (final entry in priceEntries) {
+      final recorded = DateTime.tryParse(entry.recordedAt)?.toLocal();
+      final store = storeById[entry.storeId];
+      if (recorded == null || store == null) continue;
+      historyByCommodity
+          .putIfAbsent(entry.commodityId, () => [])
+          .add(
+            CommodityPriceHistoryPoint(
+              date: recorded,
+              price: entry.price,
+              storeId: store.id!,
+              storeName: store.name,
+            ),
+          );
+    }
+    final commodityPriceTrends =
+        historyByCommodity.entries
+            .map((entry) {
+              final commodity = commodityById[entry.key];
+              if (commodity == null) return null;
+              final history = entry.value
+                ..sort((a, b) => a.date.compareTo(b.date));
+              return CommodityPriceTrend(
+                commodityId: commodity.id!,
+                commodityName: commodity.name,
+                unit: commodity.unit,
+                srp: commodity.srp,
+                history: history,
+              );
+            })
+            .nonNulls
+            .toList()
+          ..sort((a, b) => a.commodityName.compareTo(b.commodityName));
     final dailyPrices = <DateTime, List<double>>{};
     final dailySrps = <DateTime, List<double>>{};
     var aboveSrpCount = 0;
@@ -811,9 +864,11 @@ class AdminRepository {
         averageSrp: srps.reduce((a, b) => a + b) / srps.length,
       );
     }).toList()..sort((a, b) => a.date.compareTo(b.date));
-    final recentTrend = trend.length <= 30
+    // Keep enough daily history for the analytics day/week/month/year filters.
+    // The presentation layer applies the appropriate window and aggregation.
+    final recentTrend = trend.length <= 1825
         ? trend
-        : trend.sublist(trend.length - 30);
+        : trend.sublist(trend.length - 1825);
     final currentEntries = latestByStoreCommodity.values.toList();
     aboveSrpCount = currentEntries.where((entry) {
       final commodity = commodityById[entry.commodityId];
@@ -879,6 +934,7 @@ class AdminRepository {
             ..sort((a, b) => a.status.compareTo(b.status)),
       locationInsights: locationInsights,
       marketTrend: recentTrend,
+      commodityPriceTrends: commodityPriceTrends,
       aboveSrpCount: aboveSrpCount,
       highestPrice: allPrices.isEmpty
           ? 0

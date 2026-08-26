@@ -245,7 +245,7 @@ class _CommodityListScreenState extends State<CommodityListScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 if (controller.isLoading)
-                  const ListLoadingView(cardCount: 7)
+                  const ListLoadingView(cardCount: 7, shrinkWrap: true)
                 else if (controller.commodities.isEmpty)
                   const EmptyStateView(
                     title: 'No commodities found',

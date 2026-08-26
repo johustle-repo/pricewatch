@@ -71,7 +71,11 @@ class ResponsivePage extends StatelessWidget {
             .toDouble();
         final contentWidth = math.min(maxWidth, availableWidth);
         final verticalPadding = resolvedTop + resolvedBottom + safeBottom;
-        final availableHeight = expandHeight
+        // A ResponsivePage can also be placed in a scrollable or an animated
+        // route whose vertical constraint is temporarily unbounded. Passing
+        // infinity to SizedBox prevents its child from being laid out and then
+        // produces a cascade of hit-test/mouse-tracker assertions on web.
+        final availableHeight = expandHeight && constraints.hasBoundedHeight
             ? math.max(0, constraints.maxHeight - verticalPadding).toDouble()
             : null;
 

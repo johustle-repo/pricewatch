@@ -20,6 +20,8 @@ import 'features/profile/data/profile_repository.dart';
 import 'features/profile/presentation/controllers/profile_controller.dart';
 import 'features/reports/data/report_repository.dart';
 import 'features/reports/presentation/controllers/report_controller.dart';
+import 'features/reports/data/vendor_incident_repository.dart';
+import 'features/reports/presentation/controllers/vendor_incident_controller.dart';
 import 'features/stores/data/store_repository.dart';
 import 'features/stores/presentation/controllers/store_controller.dart';
 import 'features/watchlist/data/watchlist_repository.dart';
@@ -55,6 +57,9 @@ class PriceWatchApp extends StatelessWidget {
           value: dependencies.watchlistRepository,
         ),
         Provider<ReportRepository>.value(value: dependencies.reportRepository),
+        Provider<VendorIncidentRepository>.value(
+          value: dependencies.vendorIncidentRepository,
+        ),
         Provider<NotificationRepository>.value(
           value: dependencies.notificationRepository,
         ),
@@ -85,6 +90,11 @@ class PriceWatchApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) =>
               ReportController(reportRepository: dependencies.reportRepository),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => VendorIncidentController(
+            repository: dependencies.vendorIncidentRepository,
+          ),
         ),
         ChangeNotifierProvider(
           create: (_) => NotificationController(
