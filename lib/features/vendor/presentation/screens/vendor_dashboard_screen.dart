@@ -52,7 +52,6 @@ class VendorDashboardScreen extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(pagePadding, 24, pagePadding, 56),
         children: [
           _Hero(data: data, onRefresh: onRefresh, onAddProduct: onAddProduct),
-          const VendorDocumentLegend(),
           const SizedBox(height: 22),
           _KpiGrid(data: data),
           const SizedBox(height: 22),
@@ -85,6 +84,8 @@ class VendorDashboardScreen extends StatelessWidget {
             const SizedBox(height: 22),
             _PriceRegister(products: data.products),
           ],
+          const SizedBox(height: 22),
+          const VendorDocumentLegend(),
         ],
       );
     },
