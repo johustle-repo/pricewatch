@@ -69,6 +69,15 @@ The date shown is the date the price was recorded. It does not establish the exa
 - Directory summaries including ratings, report counts, and price-update counts.
 - Shop QR codes that identify the store for the reporting workflow.
 
+Vendor document color reference (documentation only; the legend is not displayed in the UI):
+
+| Color | Document type |
+| --- | --- |
+| Red | Business Permit |
+| Green | Ticket |
+
+These colors identify document types, not verification status. The current store records do not track uploaded permits, tickets, or document verification status.
+
 ### Watchlist and notifications
 
 - Add or remove commodities from a personal watchlist.
@@ -111,6 +120,7 @@ The calendar filters the report submission date in local time. It is not a separ
 - View buyer reports linked to the shop.
 - View the shop QR code, download the QR image, and copy the store reference.
 - Dedicated product and QR sections, with mobile and desktop layouts.
+- Document color reference: red for Business Permit and green for Ticket, retained in this README only.
 
 ### Administrator workspace
 
