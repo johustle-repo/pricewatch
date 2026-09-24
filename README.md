@@ -68,14 +68,6 @@ The date shown is the date the price was recorded. It does not establish the exa
 - Store details and listed commodity prices.
 - Directory summaries including ratings, report counts, and price-update counts.
 - Shop QR codes that identify the store for the reporting workflow.
-- Vendor document legend with both labels and colors:
-
-| Color | Document type |
-| --- | --- |
-| Red | Business Permit |
-| Green | Ticket |
-
-The legend appears in the store directory, administrator user management, and vendor dashboard. It identifies document types; the current store records do not track uploaded permits, tickets, or document verification status.
 
 ### Watchlist and notifications
 
@@ -119,7 +111,6 @@ The calendar filters the report submission date in local time. It is not a separ
 - View buyer reports linked to the shop.
 - View the shop QR code, download the QR image, and copy the store reference.
 - Dedicated product and QR sections, with mobile and desktop layouts.
-- Vendor document legend: red for Business Permit and green for Ticket.
 
 ### Administrator workspace
 
