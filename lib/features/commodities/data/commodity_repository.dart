@@ -193,6 +193,9 @@ class CommodityRepository {
             createdAt: '',
           ),
       latestStorePrices: snapshots,
+      priceEntries: entries
+          .where((entry) => stores.any((store) => store.id == entry.storeId))
+          .toList(),
       history: history,
       averagePrice: average,
       lowestPrice: lowest,

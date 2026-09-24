@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -51,6 +52,7 @@ class VendorDashboardScreen extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(pagePadding, 24, pagePadding, 56),
         children: [
           _Hero(data: data, onRefresh: onRefresh, onAddProduct: onAddProduct),
+          const VendorDocumentLegend(),
           const SizedBox(height: 22),
           _KpiGrid(data: data),
           const SizedBox(height: 22),
@@ -108,6 +110,7 @@ class _MobileVendorDashboard extends StatelessWidget {
       key: const Key('vendor-mobile-dashboard'),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
       children: [
+        const VendorDocumentLegend(),
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(

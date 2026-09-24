@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -99,6 +100,8 @@ class _ManageStoresScreenState extends State<ManageStoresScreen> {
                     AppSpacing.xxxl,
                   ),
                   children: [
+                    const PriceWatchHelp(),
+
                     AdminPageHeader(
                       title: 'Stores',
                       subtitle:

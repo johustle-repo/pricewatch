@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -81,6 +82,8 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                     AppSpacing.xxxl,
                   ),
                   children: [
+                    const VendorDocumentLegend(),
+
                     AdminPageHeader(
                       title: 'Users',
                       subtitle:

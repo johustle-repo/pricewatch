@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/report_date_filter.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -27,6 +28,7 @@ class ManageReportsScreen extends StatefulWidget {
 class _ManageReportsScreenState extends State<ManageReportsScreen> {
   final _searchController = TextEditingController();
   String _status = 'all';
+  DateTime? _reportDate;
   int _page = 0;
   static const _pageSize = 8;
 
@@ -63,7 +65,9 @@ class _ManageReportsScreenState extends State<ManageReportsScreen> {
           report.storeName.toLowerCase().contains(query) ||
           report.userName.toLowerCase().contains(query) ||
           report.reason.toLowerCase().contains(query);
-      return matchesStatus && matchesQuery;
+      return matchesStatus &&
+          matchesQuery &&
+          matchesReportDate(report.createdAt, _reportDate);
     }).toList();
     final pageCount = filtered.isEmpty
         ? 1
@@ -183,6 +187,13 @@ class _ManageReportsScreenState extends State<ManageReportsScreen> {
                       ),
                       child: Column(
                         children: [
+                          ReportDateFilter(
+                            value: _reportDate,
+                            onChanged: (value) => setState(() {
+                              _reportDate = value;
+                              _page = 0;
+                            }),
+                          ),
                           _ReportFilters(
                             controller: _searchController,
                             status: _status,
@@ -197,7 +208,7 @@ class _ManageReportsScreenState extends State<ManageReportsScreen> {
                               ? const EmptyStateView(
                                   title: 'No matching reports',
                                   message:
-                                      'Try another search term or report status.',
+                                      'Try another search term, report status, or date.',
                                   icon: Icons.flag_outlined,
                                 )
                               : Column(

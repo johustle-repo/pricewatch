@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -216,12 +217,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Fill in your details to start tracking prices locally.',
+                'Enter your name and email. Create and confirm a password with at least 8 characters, one uppercase letter, and one number. Vendor accounts are issued by an administrator.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: AppColors.textSecondaryFor(context),
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
+              const PriceWatchHelp(),
               AppTextField(
                 controller: _fullNameController,
                 label: 'Full name',

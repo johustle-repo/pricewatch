@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/price_increase_history.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -257,6 +258,12 @@ class _CommodityDetailScreenState extends State<CommodityDetailScreen> {
                       },
                     ),
                     const SizedBox(height: AppSpacing.xl),
+                    PriceIncreaseHistory(
+                      entries: detail.priceEntries,
+                      stores: detail.latestStorePrices,
+                      unit: detail.commodity.unit,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
                     Text(
                       'Price history',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(

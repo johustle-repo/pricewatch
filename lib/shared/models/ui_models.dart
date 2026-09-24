@@ -1,4 +1,5 @@
 import 'category_model.dart';
+import 'price_entry_model.dart';
 import 'commodity_model.dart';
 import 'store_model.dart';
 
@@ -120,6 +121,7 @@ class CommodityDetailData {
     required this.commodity,
     required this.category,
     required this.latestStorePrices,
+    this.priceEntries = const [],
     required this.history,
     required this.averagePrice,
     required this.lowestPrice,
@@ -131,6 +133,7 @@ class CommodityDetailData {
   final CommodityModel commodity;
   final CategoryModel category;
   final List<StorePriceSnapshot> latestStorePrices;
+  final List<PriceEntryModel> priceEntries;
   final List<PriceHistoryPoint> history;
   final double averagePrice;
   final double lowestPrice;

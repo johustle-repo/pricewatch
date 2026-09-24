@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -43,6 +44,8 @@ class ProfileScreen extends StatelessWidget {
                 edgeToEdgeDesktopOnly: true,
                 child: ListView(
                   children: [
+                    const PriceWatchHelp(),
+
                     Container(
                       padding: const EdgeInsets.all(AppSpacing.xl),
                       decoration: BoxDecoration(

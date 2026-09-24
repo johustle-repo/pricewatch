@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -70,6 +71,8 @@ class _StoreListScreenState extends State<StoreListScreen> {
                 parent: BouncingScrollPhysics(),
               ),
               children: [
+                const VendorDocumentLegend(),
+
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.xl),
                   decoration: BoxDecoration(

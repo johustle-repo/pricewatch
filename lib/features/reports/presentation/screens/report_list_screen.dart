@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/report_date_filter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -34,6 +35,7 @@ class ReportListScreen extends StatefulWidget {
 class _ReportListScreenState extends State<ReportListScreen> {
   final _searchController = TextEditingController();
   String _statusFilter = 'all';
+  DateTime? _reportDate;
 
   @override
   void dispose() {
@@ -73,7 +75,8 @@ class _ReportListScreenState extends State<ReportListScreen> {
           report.commodityName.toLowerCase().contains(query) ||
           report.storeName.toLowerCase().contains(query) ||
           report.reason.toLowerCase().contains(query);
-      return matchesQuery &&
+      return matchesReportDate(report.createdAt, _reportDate) &&
+          matchesQuery &&
           (_statusFilter == 'all' || report.status == _statusFilter);
     }).toList();
     final webLayout = useAdminWebLayout(context);
@@ -154,6 +157,11 @@ class _ReportListScreenState extends State<ReportListScreen> {
                               ),
                             ],
                             const SizedBox(height: AppSpacing.lg),
+                            ReportDateFilter(
+                              value: _reportDate,
+                              onChanged: (value) =>
+                                  setState(() => _reportDate = value),
+                            ),
                             _CommunityReportFilters(
                               controller: _searchController,
                               status: _statusFilter,
@@ -304,6 +312,7 @@ class _VendorReportsWebView extends StatefulWidget {
 class _VendorReportsWebViewState extends State<_VendorReportsWebView> {
   String _query = '';
   String _status = 'all';
+  DateTime? _reportDate;
 
   @override
   Widget build(BuildContext context) {
@@ -316,7 +325,9 @@ class _VendorReportsWebViewState extends State<_VendorReportsWebView> {
               report.commodityName.toLowerCase().contains(query) ||
               report.reason.toLowerCase().contains(query) ||
               report.userName.toLowerCase().contains(query);
-          return matchesQuery && (_status == 'all' || report.status == _status);
+          return matchesReportDate(report.createdAt, _reportDate) &&
+              matchesQuery &&
+              (_status == 'all' || report.status == _status);
         }).toList()..sort((a, b) {
           final aOpen = a.status == 'pending' || a.status == 'reviewed';
           final bOpen = b.status == 'pending' || b.status == 'reviewed';
@@ -343,6 +354,11 @@ class _VendorReportsWebViewState extends State<_VendorReportsWebView> {
           AppSpacing.xxxl,
         ),
         children: [
+          ReportDateFilter(
+            value: _reportDate,
+            onChanged: (value) => setState(() => _reportDate = value),
+          ),
+
           AdminPageHeader(
             eyebrow: 'Vendor workspace',
             title: 'Shop Reports',
