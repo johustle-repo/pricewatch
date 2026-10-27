@@ -529,6 +529,7 @@ class _ReportFilters extends StatelessWidget {
         ),
       );
       final filter = DropdownButtonFormField<String>(
+        isExpanded: true,
         initialValue: status,
         decoration: const InputDecoration(
           prefixIcon: Icon(Icons.filter_alt_outlined),
@@ -718,6 +719,7 @@ class _ReportRecordCard extends StatelessWidget {
           ],
           const SizedBox(height: AppSpacing.lg),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: report.status,
             decoration: const InputDecoration(labelText: 'Status'),
             items: const [
@@ -768,6 +770,7 @@ class _ReportMetaPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppColors.readableFor(context, this.accent);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(

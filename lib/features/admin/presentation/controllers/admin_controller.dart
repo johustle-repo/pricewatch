@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../../../shared/models/category_model.dart';
 import '../../../../shared/models/commodity_model.dart';
 import '../../../../shared/models/store_model.dart';
+import '../../../../shared/models/subcategory_model.dart';
 import '../../../../shared/models/ui_models.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../data/admin_repository.dart';
@@ -15,6 +16,7 @@ class AdminController extends ChangeNotifier {
   final AdminRepository _adminRepository;
 
   List<CategoryModel> _categories = [];
+  List<SubcategoryModel> _subcategories = [];
   List<CommodityModel> _commodities = [];
   List<StoreModel> _stores = [];
   List<StoreModel> _archivedStores = [];
@@ -28,6 +30,7 @@ class AdminController extends ChangeNotifier {
   String? _error;
 
   List<CategoryModel> get categories => _categories;
+  List<SubcategoryModel> get subcategories => _subcategories;
   List<CommodityModel> get commodities => _commodities;
   List<StoreModel> get stores => _stores;
   List<StoreModel> get archivedStores => _archivedStores;
@@ -43,6 +46,12 @@ class AdminController extends ChangeNotifier {
   Future<void> loadCategories() async {
     await _run(() async {
       _categories = await _adminRepository.getCategories();
+    });
+  }
+
+  Future<void> loadSubcategories() async {
+    await _run(() async {
+      _subcategories = await _adminRepository.getSubcategories();
     });
   }
 
@@ -84,12 +93,12 @@ class AdminController extends ChangeNotifier {
     });
   }
 
-  Future<void> saveCategory({
+  Future<bool> saveCategory({
     int? id,
     required String name,
     required String icon,
-  }) async {
-    await _run(() async {
+  }) {
+    return _run(() async {
       await _adminRepository.saveCategory(id: id, name: name, icon: icon);
       _categories = await _adminRepository.getCategories();
     });
@@ -102,18 +111,52 @@ class AdminController extends ChangeNotifier {
     });
   }
 
-  Future<void> saveCommodity({
+  Future<bool> saveSubcategory({
     int? id,
     required int categoryId,
+    required String name,
+  }) {
+    return _run(() async {
+      await _adminRepository.saveSubcategory(
+        id: id,
+        categoryId: categoryId,
+        name: name,
+      );
+      _subcategories = await _adminRepository.getSubcategories();
+    });
+  }
+
+  Future<void> deleteSubcategory(int subcategoryId) async {
+    await _run(() async {
+      await _adminRepository.deleteSubcategory(subcategoryId);
+      _subcategories = await _adminRepository.getSubcategories();
+    });
+  }
+
+  Future<(int, int)?> applySuggestedSubcategories() async {
+    (int, int)? result;
+    await _run(() async {
+      result = await _adminRepository.applySuggestedSubcategories();
+      _subcategories = await _adminRepository.getSubcategories();
+      _commodities = await _adminRepository.getCommodities();
+    });
+    return result;
+  }
+
+  Future<bool> saveCommodity({
+    int? id,
+    required int categoryId,
+    int? subcategoryId,
     required String name,
     required String description,
     required String unit,
     required double srp,
-  }) async {
-    await _run(() async {
+  }) {
+    return _run(() async {
       await _adminRepository.saveCommodity(
         id: id,
         categoryId: categoryId,
+        subcategoryId: subcategoryId,
         name: name,
         description: description,
         unit: unit,
@@ -196,6 +239,16 @@ class AdminController extends ChangeNotifier {
       );
       _users = await _adminRepository.getUsers();
     });
+  }
+
+  /// Returns the email the reset link went to, or null on failure (see
+  /// [error]).
+  Future<String?> sendPasswordResetEmail(int userId) async {
+    String? email;
+    await _run(() async {
+      email = await _adminRepository.sendPasswordResetEmail(userId);
+    });
+    return email;
   }
 
   Future<void> deleteUser(int userId) async {
@@ -298,11 +351,18 @@ class AdminController extends ChangeNotifier {
           continue;
         }
         if (duplicate && strategy == CsvDuplicateStrategy.update) {
-          await _adminRepository.updateLatestPriceEntry(
+          final recorded = await _adminRepository.recordPriceIfChanged(
             commodityId: item.commodityId,
             storeId: item.storeId,
             price: item.price,
           );
+          if (!recorded) {
+            errors.add(
+              'Unchanged price skipped: ${item.key.replaceAll('|', ' at ')}.',
+            );
+            _updateImportProgress(index + 1, validRows.length);
+            continue;
+          }
         } else if (duplicate && strategy == CsvDuplicateStrategy.replace) {
           await _adminRepository.replacePriceEntries(
             commodityId: item.commodityId,
@@ -314,6 +374,7 @@ class AdminController extends ChangeNotifier {
             commodityId: item.commodityId,
             storeId: item.storeId,
             price: item.price,
+            source: 'csv',
           );
           existingKeys.add(item.key);
         }
@@ -441,14 +502,18 @@ class AdminController extends ChangeNotifier {
     });
   }
 
-  Future<void> _run(Future<void> Function() action) async {
+  /// Runs [action] with loading and error state. Returns false when it
+  /// failed, so dialogs can stay open and show the error.
+  Future<bool> _run(Future<void> Function() action) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
       await action();
+      return true;
     } catch (error) {
       _error = error.toString().replaceFirst('Exception: ', '');
+      return false;
     } finally {
       _isLoading = false;
       notifyListeners();

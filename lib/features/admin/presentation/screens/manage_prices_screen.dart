@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../shared/widgets/pricewatch_help.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -7,7 +6,6 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/app_formatters.dart';
 import '../../../../shared/models/ui_models.dart';
 import '../../../../shared/widgets/app_background.dart';
-import '../../../../shared/widgets/app_surface_card.dart';
 import '../../../../shared/widgets/empty_state_view.dart';
 import '../controllers/admin_controller.dart';
 import '../../data/csv_file_picker.dart';
@@ -108,8 +106,6 @@ class _ManagePricesScreenState extends State<ManagePricesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const PriceWatchHelp(),
-
                       AdminPageHeader(
                         eyebrow: 'Price operations',
                         title: 'Price list management',
@@ -252,6 +248,7 @@ class _ManagePricesScreenState extends State<ManagePricesScreen> {
                                   ),
                                 );
                                 final filter = DropdownButtonFormField<String>(
+                                  isExpanded: true,
                                   initialValue: _complianceFilter,
                                   decoration: const InputDecoration(
                                     prefixIcon: Icon(Icons.filter_alt_outlined),
@@ -309,81 +306,6 @@ class _ManagePricesScreenState extends State<ManagePricesScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xl),
-                      AdminSectionCard(
-                        title: 'What happens after save',
-                        subtitle:
-                            'Each entry updates downstream parts of the app automatically.',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const _WorkflowStep(
-                              icon: Icons.notifications_active_outlined,
-                              title: 'Watchlists get checked',
-                              body:
-                                  'Users tracking the commodity can receive local alert records when thresholds are exceeded.',
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            const _WorkflowStep(
-                              icon: Icons.inventory_2_rounded,
-                              title: 'Commodity details update',
-                              body:
-                                  'The latest price becomes available in commodity detail views and market records.',
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            const _WorkflowStep(
-                              icon: Icons.query_stats_rounded,
-                              title: 'Analytics stay current',
-                              body:
-                                  'Category averages and operational summaries are recalculated from the latest data.',
-                            ),
-                            const SizedBox(height: AppSpacing.lg),
-                            AppSurfaceCard(
-                              radius: 30,
-                              gradient: AppColors.isDark(context)
-                                  ? AppColors.surfaceGradientFor(context)
-                                  : const LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        Color(0xFFFFF1F7),
-                                        Color(0xFFFFFFFF),
-                                      ],
-                                    ),
-                              borderColor: AppColors.primary.withValues(
-                                alpha: 0.20,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Coverage snapshot',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.w800),
-                                  ),
-                                  const SizedBox(height: AppSpacing.md),
-                                  const _CoverageRow(
-                                    label: 'Mode',
-                                    value: 'Offline-first',
-                                  ),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  _CoverageRow(
-                                    label: 'Available commodities',
-                                    value: '${controller.commodities.length}',
-                                  ),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  _CoverageRow(
-                                    label: 'Available stores',
-                                    value: '${controller.stores.length}',
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -428,6 +350,7 @@ class _ManagePricesScreenState extends State<ManagePricesScreen> {
       final decision = await showCsvImportPreview(
         context: context,
         title: 'Preview price CSV',
+        priceImport: true,
         rows: rows,
       );
       if (decision == null || !mounted) return;
@@ -702,98 +625,4 @@ class _RecentPricesTable extends StatelessWidget {
       );
     }).toList(),
   );
-}
-
-class _WorkflowStep extends StatelessWidget {
-  const _WorkflowStep({
-    required this.icon,
-    required this.title,
-    required this.body,
-  });
-
-  final IconData icon;
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundAltFor(context),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              icon,
-              color: AppColors.isDark(context)
-                  ? AppColors.darkPrimarySoft
-                  : AppColors.primaryDark,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  body,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondaryFor(context),
-                    height: 1.45,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CoverageRow extends StatelessWidget {
-  const _CoverageRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textSecondaryFor(context),
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Text(
-          value,
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-        ),
-      ],
-    );
-  }
 }

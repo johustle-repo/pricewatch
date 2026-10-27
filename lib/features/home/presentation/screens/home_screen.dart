@@ -8,6 +8,7 @@ import '../../../../core/utils/app_formatters.dart';
 import '../../../../core/utils/app_icon_mapper.dart';
 import '../../../../shared/models/category_model.dart';
 import '../../../../shared/models/ui_models.dart';
+import '../../../../shared/widgets/price_freshness_chip.dart';
 import '../../../../shared/widgets/app_background.dart';
 import '../../../../shared/widgets/app_seal_badge.dart';
 import '../../../../shared/widgets/app_search_field.dart';
@@ -22,6 +23,9 @@ import '../../../../shared/widgets/shimmer_skeleton.dart';
 import '../../../../shared/widgets/stat_card.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../admin/presentation/widgets/admin_page_frame.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -58,33 +62,42 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = auth.currentUser;
     final isVendor = user?.isVendor ?? false;
 
+    // The desktop web shell already shows a header with these actions.
+    final useWebShell =
+        MediaQuery.sizeOf(context).width >= adminWebLayoutBreakpoint;
+
     return Scaffold(
-      appBar: AppBar(
-        leading: const AppShellMenuButton(showMobileBrand: false),
-        title: Row(
-          children: [
-            const AppSealBadge(size: 32, padding: 2.5, showFrame: false),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                isVendor ? 'Vendor Workspace' : 'PriceWatch',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+      appBar: useWebShell
+          ? null
+          : AppBar(
+              leading: const AppShellMenuButton(showMobileBrand: false),
+              title: Row(
+                children: [
+                  const AppSealBadge(size: 32, padding: 2.5, showFrame: false),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      isVendor ? 'Vendor Workspace' : 'PriceWatch',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
+              actions: [
+                IconButton(
+                  onPressed: () => context.push('/stores'),
+                  icon: const Icon(Icons.storefront_outlined),
+                ),
+                const PriceWatchGuideButton(),
+                const ThemeModeButton(),
+                IconButton(
+                  tooltip: 'Notifications',
+                  onPressed: () => context.push('/notifications'),
+                  icon: const Icon(Icons.notifications_none_rounded),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            onPressed: () => context.push('/stores'),
-            icon: const Icon(Icons.storefront_outlined),
-          ),
-          IconButton(
-            onPressed: () => context.push('/notifications'),
-            icon: const Icon(Icons.notifications_none_rounded),
-          ),
-        ],
-      ),
       body: AppBackground(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -232,6 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _buildSavingsInsight(DashboardData dashboard) {
     final savings = dashboard.featuredProducts
+        .where((item) => item.hasRecordedPrice)
         .map((item) => item.srp - item.latestAveragePrice)
         .where((value) => value > 0)
         .fold<double>(0, (sum, item) => sum + item);
@@ -348,7 +362,7 @@ class _GuideStep extends StatelessWidget {
                 color: AppColors.primaryDark.withValues(alpha: .12),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, color: AppColors.primaryDark),
+              child: Icon(icon, color: AppColors.accentFor(context)),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -878,10 +892,17 @@ class _MobileShortcut extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: accent.withValues(alpha: .11),
+                color: AppColors.readableFor(
+                  context,
+                  accent,
+                ).withValues(alpha: .11),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: accent, size: 20),
+              child: Icon(
+                icon,
+                color: AppColors.readableFor(context, accent),
+                size: 20,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -918,6 +939,7 @@ class _ShortcutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppColors.readableFor(context, this.accent);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1078,7 +1100,11 @@ class _CategoryChipCard extends StatelessWidget {
                   color: AppColors.backgroundAltFor(context),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, color: AppColors.primaryDark, size: 20),
+                child: Icon(
+                  icon,
+                  color: AppColors.accentFor(context),
+                  size: 20,
+                ),
               ),
               const SizedBox(height: 14),
               Expanded(
@@ -1196,7 +1222,9 @@ class _TrendingPriceCard extends StatelessWidget {
                 Expanded(
                   child: Align(
                     alignment: Alignment.topRight,
-                    child: PriceTrendBadge(delta: item.varianceFromSrp),
+                    child: item.hasRecordedPrice
+                        ? PriceTrendBadge(delta: item.varianceFromSrp)
+                        : PriceFreshnessChip(recordedAt: item.latestUpdatedAt),
                   ),
                 ),
               ],
@@ -1218,7 +1246,9 @@ class _TrendingPriceCard extends StatelessWidget {
             ),
             const Spacer(),
             Text(
-              AppFormatters.currency(item.latestAveragePrice),
+              item.hasRecordedPrice
+                  ? AppFormatters.currency(item.latestAveragePrice)
+                  : '—',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(
@@ -1227,7 +1257,9 @@ class _TrendingPriceCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'SRP ${AppFormatters.currency(item.srp)}',
+              item.hasRecordedPrice
+                  ? 'SRP ${AppFormatters.currency(item.srp)} · ${item.storeCount == 1 ? '1 store' : '${item.storeCount} stores'}${item.isStale ? ' · stale' : ''}'
+                  : 'SRP ${AppFormatters.currency(item.srp)}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall,
@@ -1270,9 +1302,9 @@ class _WatchlistAlertStrip extends StatelessWidget {
                 color: AppColors.backgroundAltFor(context),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.notifications_active_rounded,
-                color: AppColors.primaryDark,
+                color: AppColors.accentFor(context),
               ),
             ),
             const SizedBox(width: 14),
@@ -1389,9 +1421,9 @@ class _NearbyMarketCard extends StatelessWidget {
               color: AppColors.backgroundAltFor(context),
               borderRadius: BorderRadius.circular(18),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.store_mall_directory_rounded,
-              color: AppColors.primaryDark,
+              color: AppColors.accentFor(context),
             ),
           ),
           const SizedBox(width: 14),
@@ -1481,14 +1513,18 @@ class _WatchlistAlertCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Latest average ${AppFormatters.currency(item.latestAveragePrice)}',
+                item.hasRecordedPrice
+                    ? 'Latest average ${AppFormatters.currency(item.latestAveragePrice)}'
+                    : 'No price recorded yet',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           );
-          final badge = PriceTrendBadge(delta: item.varianceFromSrp);
+          final badge = item.hasRecordedPrice
+              ? PriceTrendBadge(delta: item.varianceFromSrp)
+              : PriceFreshnessChip(recordedAt: item.latestUpdatedAt);
 
           if (compact) {
             return Column(

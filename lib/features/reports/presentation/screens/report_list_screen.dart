@@ -13,7 +13,6 @@ import '../../../../shared/models/ui_models.dart';
 import '../../../../shared/widgets/adaptive_stat_grid.dart';
 import '../../../../shared/widgets/app_background.dart';
 import '../../../../shared/widgets/app_notification_button.dart';
-import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_shell_menu_button.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_surface_card.dart';
@@ -24,6 +23,8 @@ import '../../../../shared/widgets/shimmer_skeleton.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/report_controller.dart';
 import 'store_qr_scanner_screen.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class ReportListScreen extends StatefulWidget {
   const ReportListScreen({super.key});
@@ -88,15 +89,13 @@ class _ReportListScreenState extends State<ReportListScreen> {
           ? null
           : AppBar(
               leading: const AppShellMenuButton(),
-              title: Text(isVendor ? 'Reports to My Shop' : 'My Reports'),
-              actions: const [AppNotificationButton(), SizedBox(width: 8)],
-            ),
-      floatingActionButton: isVendor
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: _startQrReportFlow,
-              icon: const Icon(Icons.qr_code_scanner_rounded),
-              label: const Text('Scan QR'),
+              title: Text(isVendor ? 'Reports to My Shop' : 'Reports'),
+              actions: const [
+                PriceWatchGuideButton(),
+                ThemeModeButton(),
+                AppNotificationButton(),
+                SizedBox(width: 8),
+              ],
             ),
       body: userId == null
           ? const SizedBox.shrink()
@@ -140,13 +139,28 @@ class _ReportListScreenState extends State<ReportListScreen> {
                             parent: BouncingScrollPhysics(),
                           ),
                           children: [
-                            _ReportsHero(
-                              isVendor: isVendor,
-                              totalReports: reports.length,
-                              pendingReports: reports
-                                  .where((report) => report.status == 'pending')
-                                  .length,
-                            ),
+                            if (isVendor)
+                              _ReportsHero(
+                                isVendor: isVendor,
+                                totalReports: reports.length,
+                                pendingReports: reports
+                                    .where(
+                                      (report) => report.status == 'pending',
+                                    )
+                                    .length,
+                              )
+                            else ...[
+                              const SizedBox(height: AppSpacing.md),
+                              _BuyerReportActions(
+                                onScanQr: _startQrReportFlow,
+                                pending: reports
+                                    .where(
+                                      (report) => report.status == 'pending',
+                                    )
+                                    .length,
+                                total: reports.length,
+                              ),
+                            ],
                             if (controller.error != null) ...[
                               const SizedBox(height: AppSpacing.md),
                               _CommunityLoadError(
@@ -157,40 +171,37 @@ class _ReportListScreenState extends State<ReportListScreen> {
                               ),
                             ],
                             const SizedBox(height: AppSpacing.lg),
-                            ReportDateFilter(
-                              value: _reportDate,
-                              onChanged: (value) =>
-                                  setState(() => _reportDate = value),
-                            ),
-                            _CommunityReportFilters(
-                              controller: _searchController,
-                              status: _statusFilter,
-                              onSearch: () => setState(() {}),
-                              onStatusChanged: (value) =>
-                                  setState(() => _statusFilter = value),
-                            ),
+                            // Filters only help once there is something to filter.
+                            if (isVendor || reports.isNotEmpty) ...[
+                              ReportDateFilter(
+                                value: _reportDate,
+                                onChanged: (value) =>
+                                    setState(() => _reportDate = value),
+                              ),
+                              _CommunityReportFilters(
+                                controller: _searchController,
+                                status: _statusFilter,
+                                onSearch: () => setState(() {}),
+                                onStatusChanged: (value) =>
+                                    setState(() => _statusFilter = value),
+                              ),
+                            ],
                             const SizedBox(height: AppSpacing.md),
                             if (visibleReports.isEmpty)
                               EmptyStateView(
                                 title: isVendor
                                     ? 'No matching shop reports'
+                                    : reports.isEmpty
+                                    ? 'No reports yet'
                                     : 'No matching reports',
                                 message: isVendor
                                     ? 'Reports from buyers will appear here when they scan your shop QR code and submit a concern.'
-                                    : 'Use the QR scan action to start a report faster and track its review status.',
+                                    : reports.isEmpty
+                                    ? 'Reports you send appear here so you can follow their review.'
+                                    : 'Change the date, search or status filter.',
                                 icon: isVendor
                                     ? Icons.verified_outlined
                                     : Icons.flag_outlined,
-                                action: isVendor
-                                    ? null
-                                    : SizedBox(
-                                        width: 220,
-                                        child: AppPrimaryButton(
-                                          label: 'Scan store QR',
-                                          icon: Icons.qr_code_scanner_rounded,
-                                          onPressed: _startQrReportFlow,
-                                        ),
-                                      ),
                               )
                             else
                               ...visibleReports.map(
@@ -265,6 +276,7 @@ class _CommunityReportFilters extends StatelessWidget {
         ),
       );
       final filter = DropdownButtonFormField<String>(
+        isExpanded: true,
         initialValue: status,
         decoration: const InputDecoration(
           prefixIcon: Icon(Icons.filter_alt_outlined),
@@ -414,6 +426,7 @@ class _VendorReportsWebViewState extends State<_VendorReportsWebView> {
                                 setState(() => _query = value),
                           );
                           final status = DropdownButtonFormField<String>(
+                            isExpanded: true,
                             initialValue: _status,
                             decoration: const InputDecoration(
                               labelText: 'Report status',
@@ -578,9 +591,9 @@ class _ReportTableNameCell extends StatelessWidget {
               color: AppColors.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.flag_rounded,
-              color: AppColors.primaryDark,
+              color: AppColors.accentFor(context),
               size: 19,
             ),
           ),
@@ -612,6 +625,148 @@ class _ReportTableNameCell extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Buyer report actions: what most people come here to do, one tap each.
+class _BuyerReportActions extends StatelessWidget {
+  const _BuyerReportActions({
+    required this.onScanQr,
+    required this.pending,
+    required this.total,
+  });
+
+  final VoidCallback onScanQr;
+  final int pending;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final actions = [
+      (
+        Icons.flag_rounded,
+        'Report overpricing',
+        'A price above SRP or wrong',
+        const Color(0xFFDD6B20),
+        () => context.push('/report/new'),
+      ),
+      (
+        Icons.qr_code_scanner_rounded,
+        'Scan store QR',
+        'Fills in the stall for you',
+        const Color(0xFF6B46C1),
+        onScanQr,
+      ),
+      (
+        Icons.gpp_maybe_rounded,
+        'Vendor incident',
+        'Short weight, refusal to sell',
+        const Color(0xFFC53030),
+        () => context.push('/incidents'),
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 640 ? 3 : 1;
+            const gap = AppSpacing.sm;
+            final width =
+                (constraints.maxWidth - gap * (columns - 1)) / columns;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final (icon, title, subtitle, tint, onTap) in actions)
+                  SizedBox(
+                    width: width,
+                    child: Material(
+                      color: AppColors.surfaceFor(context),
+                      clipBehavior: Clip.antiAlias,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        side: BorderSide(color: AppColors.borderFor(context)),
+                      ),
+                      child: InkWell(
+                        onTap: onTap,
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: AppColors.readableFor(
+                                    context,
+                                    tint,
+                                  ).withValues(alpha: 0.13),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  icon,
+                                  color: AppColors.readableFor(context, tint),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      title,
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    Text(
+                                      subtitle,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: AppColors.textSecondaryFor(
+                                              context,
+                                            ),
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                color: AppColors.textSecondaryFor(context),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          'My reports',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        Text(
+          total == 0
+              ? 'Reports you send are reviewed by the market administrator.'
+              : '$total sent \u00b7 $pending awaiting review',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: AppColors.textSecondaryFor(context),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -738,14 +893,18 @@ class _ReportListCard extends StatelessWidget {
 
     return AppSurfaceCard(
       onTap: () => context.push('/report/${report.reportId}'),
-      borderColor: visual.color.withValues(alpha: 0.2),
+      borderColor: AppColors.readableFor(
+        context,
+        visual.color,
+      ).withValues(alpha: 0.2),
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          visual.color.withValues(
-            alpha: AppColors.isDark(context) ? 0.12 : 0.07,
-          ),
+          AppColors.readableFor(
+            context,
+            visual.color,
+          ).withValues(alpha: AppColors.isDark(context) ? 0.12 : 0.07),
           AppColors.surfaceFor(context),
         ],
       ),
@@ -770,7 +929,7 @@ class _ReportListCard extends StatelessWidget {
                   ),
                   AppStatusBadge(
                     label: visual.label,
-                    color: visual.color,
+                    color: AppColors.readableFor(context, visual.color),
                     icon: visual.icon,
                   ),
                 ],

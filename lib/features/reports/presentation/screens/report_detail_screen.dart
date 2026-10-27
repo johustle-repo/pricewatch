@@ -17,6 +17,9 @@ import '../../../../shared/widgets/responsive_page.dart';
 import '../../../../shared/widgets/shimmer_skeleton.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/report_controller.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../admin/presentation/widgets/admin_page_frame.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class ReportDetailScreen extends StatefulWidget {
   const ReportDetailScreen({super.key, required this.reportId});
@@ -38,7 +41,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final useWebShell = MediaQuery.sizeOf(context).width >= 1024;
+    final useWebShell =
+        MediaQuery.sizeOf(context).width >= adminWebLayoutBreakpoint;
     final controller = context.watch<ReportController>();
     final isVendor =
         context.watch<AuthController>().currentUser?.isVendor ?? false;
@@ -50,7 +54,12 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           : AppBar(
               leading: const AppShellMenuButton(),
               title: const Text('Report Details'),
-              actions: const [AppNotificationButton(), SizedBox(width: 8)],
+              actions: const [
+                PriceWatchGuideButton(),
+                ThemeModeButton(),
+                AppNotificationButton(),
+                SizedBox(width: 8),
+              ],
             ),
       body: AppBackground(
         child: controller.isLoading && report == null
@@ -293,6 +302,7 @@ class _VendorReportActions extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: report.status,
           decoration: const InputDecoration(
             labelText: 'Report status',
@@ -361,7 +371,7 @@ class _ReportHeaderCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.md),
               AppStatusBadge(
                 label: visual.label,
-                color: visual.color,
+                color: AppColors.readableFor(context, visual.color),
                 icon: visual.icon,
               ),
             ],

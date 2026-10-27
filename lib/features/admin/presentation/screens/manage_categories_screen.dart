@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/app_icon_mapper.dart';
 import '../../../../shared/models/category_model.dart';
+import '../../../../shared/models/subcategory_model.dart';
 import '../../../../shared/widgets/app_background.dart';
 import '../../../../shared/widgets/app_surface_card.dart';
 import '../../../../shared/widgets/empty_state_view.dart';
@@ -33,8 +34,11 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AdminController>().loadCategories();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final controller = context.read<AdminController>();
+      await controller.loadCategories();
+      await controller.loadSubcategories();
+      await controller.loadCommodities();
     });
   }
 
@@ -48,6 +52,14 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
           (item) => query.isEmpty || item.name.toLowerCase().contains(query),
         )
         .toList();
+    final commodityCounts = <int, int>{};
+    for (final commodity in controller.commodities) {
+      final subcategoryId = commodity.subcategoryId;
+      if (subcategoryId != null) {
+        commodityCounts[subcategoryId] =
+            (commodityCounts[subcategoryId] ?? 0) + 1;
+      }
+    }
 
     return Scaffold(
       appBar: webLayout ? null : AppBar(title: const Text('Manage Categories')),
@@ -129,16 +141,16 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
                               children: [
                                 for (
                                   var i = 0;
-                                  i < controller.categories.length;
+                                  i < visibleCategories.length;
                                   i++
                                 ) ...[
                                   _CategoryRow(
-                                    item: controller.categories[i],
+                                    item: visibleCategories[i],
                                     onEdit: () => _openCategoryDialog(
-                                      category: controller.categories[i],
+                                      category: visibleCategories[i],
                                     ),
                                   ),
-                                  if (i != controller.categories.length - 1)
+                                  if (i != visibleCategories.length - 1)
                                     const Padding(
                                       padding: EdgeInsets.symmetric(
                                         vertical: AppSpacing.md,
@@ -149,6 +161,34 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
                               ],
                             ),
                           ),
+                    if (visibleCategories.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.xl),
+                      _SubcategoriesHeader(
+                        onApplySuggested: controller.isLoading
+                            ? null
+                            : _applySuggestedSubcategories,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      for (final category in visibleCategories) ...[
+                        _SubcategoryCard(
+                          category: category,
+                          subcategories: controller.subcategories
+                              .where((item) => item.categoryId == category.id)
+                              .toList(),
+                          commodityCounts: commodityCounts,
+                          onAdd: () => _openSubcategoryDialog(
+                            controller.categories,
+                            categoryId: category.id,
+                          ),
+                          onEdit: (subcategory) => _openSubcategoryDialog(
+                            controller.categories,
+                            subcategory: subcategory,
+                          ),
+                          onDelete: _confirmDeleteSubcategory,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                    ],
                   ],
                 ),
               ),
@@ -180,6 +220,7 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: selectedIcon,
                   decoration: const InputDecoration(labelText: 'Icon key'),
                   items: _iconOptions
@@ -208,13 +249,22 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
               if (!formKey.currentState!.validate()) {
                 return;
               }
-              await context.read<AdminController>().saveCategory(
+              final saved = await context.read<AdminController>().saveCategory(
                 id: category?.id,
                 name: nameController.text,
                 icon: selectedIcon,
               );
-              if (context.mounted) {
+              if (saved && context.mounted) {
                 Navigator.of(context).pop();
+              } else if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      context.read<AdminController>().error ??
+                          'Could not save the category.',
+                    ),
+                  ),
+                );
               }
             },
             child: const Text('Save'),
@@ -247,6 +297,273 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
     );
     if (confirmed != true || !mounted) return;
     await context.read<AdminController>().deleteCategory(category.id!);
+  }
+
+  Future<void> _openSubcategoryDialog(
+    List<CategoryModel> categories, {
+    int? categoryId,
+    SubcategoryModel? subcategory,
+  }) async {
+    final fallbackCategoryId = categoryId ?? categories.firstOrNull?.id;
+    if (fallbackCategoryId == null) return;
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController(text: subcategory?.name ?? '');
+    var selectedCategoryId = subcategory?.categoryId ?? fallbackCategoryId;
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          subcategory == null ? 'Add sub-category' : 'Edit sub-category',
+        ),
+        content: StatefulBuilder(
+          builder: (context, setState) => Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<int>(
+                  isExpanded: true,
+                  initialValue: selectedCategoryId,
+                  decoration: const InputDecoration(labelText: 'Category'),
+                  items: categories
+                      .map(
+                        (item) => DropdownMenuItem<int>(
+                          value: item.id,
+                          child: Text(item.name),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => selectedCategoryId = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Sub-category name',
+                    hintText: 'e.g. Bangus, Tilapia, Galunggong',
+                  ),
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Name is required.'
+                      : null,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (!formKey.currentState!.validate()) {
+                return;
+              }
+              final saved = await context
+                  .read<AdminController>()
+                  .saveSubcategory(
+                    id: subcategory?.id,
+                    categoryId: selectedCategoryId,
+                    name: nameController.text,
+                  );
+              if (saved && context.mounted) {
+                Navigator.of(context).pop();
+              } else if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      context.read<AdminController>().error ??
+                          'Could not save the sub-category.',
+                    ),
+                  ),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteSubcategory(SubcategoryModel subcategory) async {
+    if (subcategory.id == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete sub-category'),
+        content: Text(
+          'Delete ${subcategory.name}? Sub-categories with commodities are protected.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await context.read<AdminController>().deleteSubcategory(subcategory.id!);
+  }
+
+  Future<void> _applySuggestedSubcategories() async {
+    final controller = context.read<AdminController>();
+    final result = await controller.applySuggestedSubcategories();
+    if (!mounted || result == null) return;
+    final (created, linked) = result;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Added $created sub-categories and linked $linked commodities.',
+        ),
+      ),
+    );
+  }
+}
+
+class _SubcategoriesHeader extends StatelessWidget {
+  const _SubcategoriesHeader({required this.onApplySuggested});
+
+  final VoidCallback? onApplySuggested;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final text = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Sub-categories',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Group commodities inside each category, such as Tilapia, Galunggong, and Bangus under Fish. Prices are recorded per commodity and summarized per sub-category.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: AppColors.textSecondaryFor(context),
+          ),
+        ),
+      ],
+    );
+    final button = OutlinedButton.icon(
+      onPressed: onApplySuggested,
+      icon: const Icon(Icons.auto_awesome_outlined),
+      label: const Text('Add suggested sub-categories'),
+      // The theme's full-width minimum size cannot be laid out inside a Row.
+      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 700) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              text,
+              const SizedBox(height: AppSpacing.sm),
+              button,
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: text),
+            const SizedBox(width: AppSpacing.md),
+            button,
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SubcategoryCard extends StatelessWidget {
+  const _SubcategoryCard({
+    required this.category,
+    required this.subcategories,
+    required this.commodityCounts,
+    required this.onAdd,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final CategoryModel category;
+  final List<SubcategoryModel> subcategories;
+  final Map<int, int> commodityCounts;
+  final VoidCallback onAdd;
+  final ValueChanged<SubcategoryModel> onEdit;
+  final ValueChanged<SubcategoryModel> onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSurfaceCard(
+      radius: 24,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                AppIconMapper.fromKey(category.icon),
+                color: AppColors.accentFor(context),
+                size: 22,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  category.name,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: onAdd,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Add'),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (subcategories.isEmpty)
+            Text(
+              'No sub-categories yet.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSecondaryFor(context),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final subcategory in subcategories)
+                  InputChip(
+                    label: Text(
+                      '${subcategory.name} (${commodityCounts[subcategory.id] ?? 0})',
+                    ),
+                    tooltip: 'Edit ${subcategory.name}',
+                    onPressed: () => onEdit(subcategory),
+                    deleteButtonTooltipMessage: 'Delete ${subcategory.name}',
+                    onDeleted: () => onDelete(subcategory),
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
   }
 }
 
@@ -282,7 +599,7 @@ class _CategoriesTable extends StatelessWidget {
                       ),
                       child: Icon(
                         AppIconMapper.fromKey(category.icon),
-                        color: AppColors.primaryDark,
+                        color: AppColors.accentFor(context),
                         size: 20,
                       ),
                     ),
@@ -343,7 +660,7 @@ class _CategoryRow extends StatelessWidget {
           ),
           child: Icon(
             AppIconMapper.fromKey(item.icon),
-            color: AppColors.primaryDark,
+            color: AppColors.accentFor(context),
           ),
         ),
         const SizedBox(width: AppSpacing.md),

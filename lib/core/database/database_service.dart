@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -314,7 +317,7 @@ class DatabaseService {
           'full_name': 'Maria Santos',
           'email': AppConstants.demoUserEmail,
           'password_hash': PasswordHasher.hashPassword(
-            AppConstants.demoUserPassword,
+            _unusablePassword(),
             email: AppConstants.demoUserEmail,
           ),
           'role': 'user',
@@ -325,7 +328,7 @@ class DatabaseService {
           'full_name': 'Admin Reyes',
           'email': AppConstants.demoAdminEmail,
           'password_hash': PasswordHasher.hashPassword(
-            AppConstants.demoAdminPassword,
+            _unusablePassword(),
             email: AppConstants.demoAdminEmail,
           ),
           'role': 'admin',
@@ -336,7 +339,7 @@ class DatabaseService {
           'full_name': 'Vendor Cruz',
           'email': AppConstants.demoVendorEmail,
           'password_hash': PasswordHasher.hashPassword(
-            AppConstants.demoVendorPassword,
+            _unusablePassword(),
             email: AppConstants.demoVendorEmail,
           ),
           'role': 'vendor',
@@ -724,6 +727,13 @@ class DatabaseService {
     });
   }
 
+  /// Local seed accounts never sign in (Firebase Authentication does), so
+  /// they get a random password instead of a credential shipped in the app.
+  static String _unusablePassword() {
+    final random = Random.secure();
+    return base64UrlEncode(List.generate(24, (_) => random.nextInt(256)));
+  }
+
   Future<void> _ensureDemoVendorAccount(Database db) async {
     final existing = await db.query(
       'users',
@@ -748,7 +758,7 @@ class DatabaseService {
       'full_name': 'Vendor Cruz',
       'email': AppConstants.demoVendorEmail,
       'password_hash': PasswordHasher.hashPassword(
-        AppConstants.demoVendorPassword,
+        _unusablePassword(),
         email: AppConstants.demoVendorEmail,
       ),
       'role': 'vendor',

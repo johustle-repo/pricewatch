@@ -68,6 +68,24 @@ class AppColors {
   static bool isDark(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
 
+  /// Brand color for icons and text: the deep crimson is too dark to read
+  /// on dark surfaces, so dark mode uses the lighter pink.
+  static Color accentFor(BuildContext context) =>
+      isDark(context) ? darkPrimarySoft : primaryDark;
+
+  /// Returns [color] adjusted to stay readable on the current surface:
+  /// lightened on dark surfaces, and the pale [sky] deepened on light ones.
+  /// Used by chips and badges that take a color.
+  static Color readableFor(BuildContext context, Color color) {
+    if (!isDark(context)) return color == sky ? primary : color;
+    if (color == primary || color == primaryDark || color == darkPrimaryDeep) {
+      return darkPrimarySoft;
+    }
+    if (color == warningText) return warning;
+    if (color.computeLuminance() >= 0.2) return color;
+    return Color.lerp(color, Colors.white, 0.45)!;
+  }
+
   static Color backgroundFor(BuildContext context) =>
       isDark(context) ? darkBackground : background;
 

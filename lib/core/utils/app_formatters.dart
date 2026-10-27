@@ -25,4 +25,26 @@ class AppFormatters {
   static String date(String iso) => DateTimeUtils.dateLabel(iso);
 
   static String dateTime(String iso) => DateTimeUtils.dateTimeLabel(iso);
+
+  /// Formats a person's name as "Juan Dela Cruz". Words typed in all
+  /// lowercase or all caps are capitalized; mixed-case words such as
+  /// "McArthur" are kept as typed.
+  static String personName(String value) {
+    return value
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .map((word) => word.split('-').map(_capitalizeWord).join('-'))
+        .join(' ');
+  }
+
+  static String _capitalizeWord(String word) {
+    if (word.isEmpty) return word;
+    final isUniformCase =
+        word == word.toLowerCase() || word == word.toUpperCase();
+    final rest = isUniformCase
+        ? word.substring(1).toLowerCase()
+        : word.substring(1);
+    return word[0].toUpperCase() + rest;
+  }
 }

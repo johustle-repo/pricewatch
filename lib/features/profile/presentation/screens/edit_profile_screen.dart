@@ -12,6 +12,9 @@ import '../../../../shared/widgets/app_surface_card.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/profile_controller.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../admin/presentation/widgets/admin_page_frame.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -42,7 +45,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final useWebShell = MediaQuery.sizeOf(context).width >= 1024;
+    final useWebShell =
+        MediaQuery.sizeOf(context).width >= adminWebLayoutBreakpoint;
     final controller = context.watch<ProfileController>();
 
     return Scaffold(
@@ -51,7 +55,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           : AppBar(
               leading: const AppShellMenuButton(),
               title: const Text('Edit Profile'),
-              actions: const [AppNotificationButton(), SizedBox(width: 8)],
+              actions: const [
+                PriceWatchGuideButton(),
+                ThemeModeButton(),
+                AppNotificationButton(),
+                SizedBox(width: 8),
+              ],
             ),
       body: AppBackground(
         child: SingleChildScrollView(

@@ -11,6 +11,7 @@ Future<CsvImportDecision?> showCsvImportPreview({
   required BuildContext context,
   required String title,
   required List<Map<String, String>> rows,
+  bool priceImport = false,
 }) {
   var strategy = CsvDuplicateStrategy.update;
   final headers = rows.isEmpty ? <String>[] : rows.first.keys.toList();
@@ -101,23 +102,33 @@ Future<CsvImportDecision?> showCsvImportPreview({
                 RadioGroup<CsvDuplicateStrategy>(
                   groupValue: strategy,
                   onChanged: (value) => setState(() => strategy = value!),
-                  child: const Column(
+                  child: Column(
                     children: [
-                      RadioListTile(
+                      const RadioListTile(
                         value: CsvDuplicateStrategy.skip,
                         title: Text('Skip duplicates'),
                         subtitle: Text('Keep existing records unchanged.'),
                       ),
                       RadioListTile(
                         value: CsvDuplicateStrategy.update,
-                        title: Text('Update duplicates'),
-                        subtitle: Text('Update the matching current record.'),
+                        title: Text(
+                          priceImport
+                              ? 'Record as a new price'
+                              : 'Update duplicates',
+                        ),
+                        subtitle: Text(
+                          priceImport
+                              ? 'Add a new dated price and keep earlier prices for history and trends. Unchanged prices are skipped.'
+                              : 'Update the matching current record.',
+                        ),
                       ),
                       RadioListTile(
                         value: CsvDuplicateStrategy.replace,
-                        title: Text('Replace duplicates'),
+                        title: const Text('Replace duplicates'),
                         subtitle: Text(
-                          'Replace matching data with CSV values.',
+                          priceImport
+                              ? "Delete the store's earlier prices for the item, then save the CSV price. History is lost."
+                              : 'Replace matching data with CSV values.',
                         ),
                       ),
                     ],

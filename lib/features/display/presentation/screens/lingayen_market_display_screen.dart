@@ -454,6 +454,7 @@ class _PublicBoardFilters extends StatelessWidget {
           ),
         );
         final categoryField = DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: category,
           decoration: const InputDecoration(
             labelText: 'Category',
@@ -468,6 +469,7 @@ class _PublicBoardFilters extends StatelessWidget {
           onChanged: (value) => onChanged(query, value ?? 'all', compliance),
         );
         final complianceField = DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: compliance,
           decoration: const InputDecoration(
             labelText: 'SRP status',

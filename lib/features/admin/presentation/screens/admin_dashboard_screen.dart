@@ -462,6 +462,7 @@ class _DashboardStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppColors.readableFor(context, this.accent);
     return AppSurfaceCard(
       radius: 20,
       padding: const EdgeInsets.all(20),
@@ -668,6 +669,7 @@ class _QuickActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppColors.readableFor(context, this.accent);
     return AppSurfaceCard(
       onTap: onTap,
       radius: 22,

@@ -4,6 +4,7 @@ import '../../../../shared/widgets/price_increase_history.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/utils/market_prices.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/app_formatters.dart';
@@ -18,6 +19,9 @@ import '../../../../shared/widgets/responsive_page.dart';
 import '../../../../shared/widgets/shimmer_skeleton.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/commodity_controller.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../admin/presentation/widgets/admin_page_frame.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class CommodityDetailScreen extends StatefulWidget {
   const CommodityDetailScreen({super.key, required this.commodityId});
@@ -45,7 +49,8 @@ class _CommodityDetailScreenState extends State<CommodityDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final useWebShell = MediaQuery.sizeOf(context).width >= 1024;
+    final useWebShell =
+        MediaQuery.sizeOf(context).width >= adminWebLayoutBreakpoint;
     final controller = context.watch<CommodityController>();
     final auth = context.watch<AuthController>();
     final detail = controller.detail;
@@ -58,6 +63,8 @@ class _CommodityDetailScreenState extends State<CommodityDetailScreen> {
               leading: const AppShellMenuButton(),
               title: const Text('Commodity Details'),
               actions: [
+                const PriceWatchGuideButton(),
+                const ThemeModeButton(),
                 const AppNotificationButton(),
                 IconButton(
                   onPressed: () => context.push(
@@ -125,7 +132,11 @@ class _CommodityDetailScreenState extends State<CommodityDetailScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    '${detail.category.name} | ${detail.commodity.unit}',
+                                    [
+                                      detail.category.name,
+                                      ?detail.subcategoryName,
+                                      detail.commodity.unit,
+                                    ].join(' | '),
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodyMedium
@@ -136,11 +147,24 @@ class _CommodityDetailScreenState extends State<CommodityDetailScreen> {
                                         ),
                                   ),
                                   const SizedBox(height: 12),
-                                  PriceTrendBadge(
-                                    delta:
-                                        detail.averagePrice -
-                                        detail.commodity.srp,
-                                  ),
+                                  if (detail.hasRecordedPrice)
+                                    PriceTrendBadge(
+                                      delta:
+                                          detail.averagePrice -
+                                          detail.commodity.srp,
+                                    )
+                                  else
+                                    Text(
+                                      'No store has recorded a price yet. SRP is shown for reference.',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.86,
+                                            ),
+                                          ),
+                                    ),
                                 ],
                               );
 
@@ -192,9 +216,11 @@ class _CommodityDetailScreenState extends State<CommodityDetailScreen> {
                               Expanded(
                                 child: _HeroDataPill(
                                   label: 'Average',
-                                  value: AppFormatters.currency(
-                                    detail.averagePrice,
-                                  ),
+                                  value: detail.hasRecordedPrice
+                                      ? AppFormatters.currency(
+                                          detail.averagePrice,
+                                        )
+                                      : '—',
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -202,6 +228,21 @@ class _CommodityDetailScreenState extends State<CommodityDetailScreen> {
                                 child: _HeroDataPill(
                                   label: 'Stores',
                                   value: '${detail.latestStorePrices.length}',
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _HeroDataPill(
+                                  label:
+                                      detail.latestRecordedAt != null &&
+                                          isStalePrice(detail.latestRecordedAt!)
+                                      ? 'Updated (stale)'
+                                      : 'Updated',
+                                  value: detail.latestRecordedAt == null
+                                      ? '—'
+                                      : AppFormatters.date(
+                                          detail.latestRecordedAt!,
+                                        ),
                                 ),
                               ),
                             ],
@@ -221,12 +262,16 @@ class _CommodityDetailScreenState extends State<CommodityDetailScreen> {
                           ),
                           _PriceMetricCard(
                             label: 'Lowest',
-                            value: AppFormatters.currency(detail.lowestPrice),
+                            value: detail.hasRecordedPrice
+                                ? AppFormatters.currency(detail.lowestPrice)
+                                : '—',
                             accent: AppColors.primarySoft,
                           ),
                           _PriceMetricCard(
                             label: 'Highest',
-                            value: AppFormatters.currency(detail.highestPrice),
+                            value: detail.hasRecordedPrice
+                                ? AppFormatters.currency(detail.highestPrice)
+                                : '—',
                             accent: AppColors.warning,
                           ),
                         ];
@@ -703,6 +748,8 @@ class _HeroDataPill extends StatelessWidget {
         children: [
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Colors.white.withValues(alpha: 0.8),
             ),
@@ -710,6 +757,8 @@ class _HeroDataPill extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w800,
@@ -734,6 +783,7 @@ class _PriceMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppColors.readableFor(context, this.accent);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

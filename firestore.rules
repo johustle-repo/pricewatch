@@ -48,6 +48,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /subcategories/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /commodities/{id} {
       allow read: if true;
       allow write: if isAdmin();
@@ -58,13 +63,25 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // A price must be a positive amount for a known commodity and store.
+    function validPriceEntry(data) {
+      return data.price is number &&
+        data.price > 0 &&
+        data.price < 1000000 &&
+        data.commodity_id is int &&
+        data.store_id is int &&
+        data.recorded_at is string;
+    }
+
     match /price_entries/{id} {
       allow read: if true;
-      allow create: if isAdmin() ||
-        (isVendor() && request.resource.data.store_id == access().store_id);
-      allow update: if isAdmin() ||
-        (ownsStoreId(resource.data.store_id) &&
-         request.resource.data.store_id == resource.data.store_id);
+      allow create: if validPriceEntry(request.resource.data) &&
+        (isAdmin() ||
+         (isVendor() && request.resource.data.store_id == access().store_id));
+      allow update: if validPriceEntry(request.resource.data) &&
+        (isAdmin() ||
+         (ownsStoreId(resource.data.store_id) &&
+          request.resource.data.store_id == resource.data.store_id));
       allow delete: if isAdmin() || ownsStoreId(resource.data.store_id);
     }
 

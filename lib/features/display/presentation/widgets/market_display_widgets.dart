@@ -10,6 +10,8 @@ import '../../../../core/utils/app_formatters.dart';
 import '../../../../shared/widgets/app_seal_badge.dart';
 import '../../../../shared/widgets/commodity_visual.dart';
 import '../../domain/market_display_models.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class MarketDisplayHeader extends StatelessWidget {
   const MarketDisplayHeader({
@@ -320,16 +322,21 @@ class _PublicPriceCard extends StatelessWidget {
         : delta < 0
         ? AppColors.success
         : AppColors.info;
-    final statusColor = item.isAboveSrp
+    final statusColor = !item.hasRecordedPrice
+        ? AppColors.textSecondaryFor(context)
+        : item.isAboveSrp
         ? AppColors.warningText
         : item.isBelowSrp
         ? AppColors.success
         : AppColors.info;
-    final status = item.isAboveSrp
-        ? 'Above SRP'
-        : item.isBelowSrp
-        ? 'Below SRP'
-        : 'At SRP';
+    final status = item.statusLabel;
+    final trendLabel = !item.hasRecordedPrice
+        ? 'Awaiting first market price'
+        : '${delta > 0
+              ? '↗ +'
+              : delta < 0
+              ? '↘ -'
+              : '→ '}${_priceBoardCurrency(delta.abs())} vs previous · ${item.storeCountLabel}';
     final prices = [item.previousPrice, item.currentPrice, item.srp];
     final minPrice = prices.reduce((a, b) => a < b ? a : b);
     final maxPrice = prices.reduce((a, b) => a > b ? a : b);
@@ -400,11 +407,9 @@ class _PublicPriceCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  '${delta > 0
-                      ? '↗ +'
-                      : delta < 0
-                      ? '↘ -'
-                      : '→ '}${_priceBoardCurrency(delta.abs())} vs previous',
+                  trendLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: trendColor,
                     fontWeight: FontWeight.w800,
@@ -416,15 +421,23 @@ class _PublicPriceCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _PublicPriceMetric(
-                      label: 'Current',
-                      value: _priceBoardCurrency(item.currentPrice),
+                      label: item.storeCount > 1 ? 'Average' : 'Current',
+                      value: _boardPrice(item),
                     ),
                   ),
                   Expanded(
-                    child: _PublicPriceMetric(
-                      label: 'Previous',
-                      value: _priceBoardCurrency(item.previousPrice),
-                    ),
+                    child: item.hasPriceRange
+                        ? _PublicPriceMetric(
+                            label: 'Range',
+                            value:
+                                '${_compactPeso(item.lowestPrice)}–${_compactPeso(item.highestPrice)}',
+                          )
+                        : _PublicPriceMetric(
+                            label: 'Previous',
+                            value: item.hasRecordedPrice
+                                ? _priceBoardCurrency(item.previousPrice)
+                                : '—',
+                          ),
                   ),
                   Expanded(
                     child: _PublicPriceMetric(
@@ -435,7 +448,7 @@ class _PublicPriceCard extends StatelessWidget {
                 ],
               ),
               const Spacer(),
-              if (!dense)
+              if (!dense && item.hasRecordedPrice)
                 SizedBox(
                   height: 44,
                   child: LineChart(
@@ -481,15 +494,19 @@ class _PublicPriceCard extends StatelessWidget {
               if (!dense) const SizedBox(height: 2),
               Row(
                 children: [
-                  Text(
-                    'Previous',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.textSecondaryFor(context),
+                  // Labels the left end of the chart, so only with the chart.
+                  if (!dense && item.hasRecordedPrice)
+                    Text(
+                      'Previous',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.textSecondaryFor(context),
+                      ),
                     ),
-                  ),
                   const Spacer(),
                   Text(
-                    'Latest • ${AppFormatters.dateTime(item.recordedAt)}',
+                    item.hasRecordedPrice
+                        ? 'Latest • ${_boardRecorded(item, 'MMM d, h:mm a')}'
+                        : 'No market price recorded',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -624,14 +641,8 @@ class ExpandedPriceTableRow extends StatelessWidget {
         : item.isBelowSrp
         ? const Color(0xFF0F9F7A)
         : const Color(0xFF64748B);
-    final status = item.isAboveSrp
-        ? 'Above SRP'
-        : item.isBelowSrp
-        ? 'Below SRP'
-        : 'At SRP';
-    final recorded = DateFormat(
-      'MMM d, h:mm a',
-    ).format(DateTime.parse(item.recordedAt).toLocal());
+    final status = item.statusLabel;
+    final recorded = _boardRecorded(item, 'MMM d, h:mm a');
     return Container(
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -684,7 +695,7 @@ class ExpandedPriceTableRow extends StatelessWidget {
           Expanded(
             flex: 16,
             child: Text(
-              _priceBoardCurrency(item.currentPrice),
+              _boardPrice(item),
               textAlign: TextAlign.right,
               style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
             ),
@@ -699,7 +710,9 @@ class ExpandedPriceTableRow extends StatelessWidget {
           Expanded(
             flex: 16,
             child: Text(
-              '${variance >= 0 ? '+' : '-'}${_priceBoardCurrency(variance.abs())}',
+              item.hasRecordedPrice
+                  ? '${variance >= 0 ? '+' : '-'}${_priceBoardCurrency(variance.abs())}'
+                  : '—',
               textAlign: TextAlign.right,
               style: TextStyle(color: color, fontWeight: FontWeight.w800),
             ),
@@ -880,6 +893,7 @@ class _BoardMetricChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = AppColors.readableFor(context, this.color);
     final labelColor = AppColors.isDark(context)
         ? color.withValues(alpha: 0.95)
         : color;
@@ -935,14 +949,10 @@ class _PriceBoardRow extends StatelessWidget {
     final effectiveAccent = useDark
         ? (item.isAboveSrp ? AppColors.warning : AppColors.darkPrimarySoft)
         : accent;
-    final statusLabel = item.isAboveSrp
-        ? 'Above SRP'
-        : item.isBelowSrp
-        ? 'Below SRP'
-        : 'At SRP';
-    final recordedLabel = DateFormat(
-      'h:mm a',
-    ).format(DateTime.parse(item.recordedAt).toLocal());
+    final statusLabel = item.statusLabel;
+    final recordedLabel = item.hasRecordedPrice
+        ? '${_boardRecorded(item, 'MMM d')} · ${item.storeCountLabel}'
+        : 'No price yet';
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -1037,7 +1047,7 @@ class _PriceBoardRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                _priceBoardCurrency(item.currentPrice),
+                _boardPrice(item),
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontSize: compact ? 20 : 22,
                   color: AppColors.textPrimaryFor(context),
@@ -1275,6 +1285,9 @@ class _HeaderMeta extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.xs),
+            const PriceWatchGuideButton(color: Colors.white),
+            const ThemeModeButton(color: Colors.white),
+            const SizedBox(width: AppSpacing.xs),
             SizedBox(
               width: 104,
               child: OutlinedButton.icon(
@@ -1446,6 +1459,23 @@ List<List<MarketDisplayPriceItem>> _splitItemsIntoColumns(
 }
 
 String _priceBoardCurrency(double value) => '\u20B1${value.toStringAsFixed(2)}';
+
+/// Whole pesos without decimals, so a price range fits in a narrow cell.
+String _compactPeso(double value) => value == value.roundToDouble()
+    ? '₱${value.toStringAsFixed(0)}'
+    : _priceBoardCurrency(value);
+
+/// Current price, or a dash when no stall has recorded one yet.
+String _boardPrice(MarketDisplayPriceItem item) =>
+    item.hasRecordedPrice ? _priceBoardCurrency(item.currentPrice) : '—';
+
+String _boardRecorded(MarketDisplayPriceItem item, String pattern) {
+  if (!item.hasRecordedPrice) return 'No price yet';
+  final recorded = DateTime.tryParse(item.recordedAt);
+  if (recorded == null) return '';
+  final label = DateFormat(pattern).format(recorded.toLocal());
+  return item.isStale ? 'Stale · $label' : label;
+}
 
 List<MarketDisplayPriceItem> _itemsForPage(
   List<MarketDisplayPriceItem> items, {

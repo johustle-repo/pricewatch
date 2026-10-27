@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../../../shared/widgets/pricewatch_help.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -203,7 +202,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Text(
                 'COMMUNITY ACCESS',
                 style: theme.textTheme.labelMedium?.copyWith(
-                  color: AppColors.primary,
+                  color: AppColors.accentFor(context),
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.1,
                 ),
@@ -223,7 +222,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              const PriceWatchHelp(),
               AppTextField(
                 controller: _fullNameController,
                 label: 'Full name',

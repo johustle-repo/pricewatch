@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 
 import '../../../core/database/cloud_data_service.dart';
+import '../../../core/utils/app_formatters.dart';
 import '../../../core/utils/date_time_utils.dart';
 import '../../../shared/models/user_model.dart';
 
@@ -47,14 +48,16 @@ class AuthRepository {
         password: password,
       );
     } on firebase.FirebaseAuthException catch (error) {
-      if ({'user-not-found', 'invalid-credential'}.contains(error.code)) {
+      // With email enumeration protection enabled, Firebase reports both a
+      // wrong password and an unknown email as 'invalid-credential', so only
+      // 'user-not-found' reliably means the account does not exist.
+      if (error.code == 'user-not-found') {
         throw Exception(
-          'This account is not registered in Firebase Authentication. '
-          'Select Create account once using this email, then sign in normally.',
+          'No account uses this email. Buyers can create an account; '
+          'vendor accounts are issued by an administrator.',
         );
-      } else {
-        throw Exception(_authMessage(error));
       }
+      throw Exception(_authMessage(error));
     }
     final user = await getActiveUser();
     if (user == null) throw Exception('Your account profile is unavailable.');
@@ -80,7 +83,9 @@ class AuthRepository {
         email: normalizedEmail,
         password: password,
       );
-      await credential.user?.updateDisplayName(fullName.trim());
+      await credential.user?.updateDisplayName(
+        AppFormatters.personName(fullName),
+      );
     } on firebase.FirebaseAuthException catch (error) {
       throw Exception(_authMessage(error));
     }
@@ -95,7 +100,7 @@ class AuthRepository {
         userData: {
           'id': userId,
           'auth_uid': authUid,
-          'full_name': fullName.trim(),
+          'full_name': AppFormatters.personName(fullName),
           'email': normalizedEmail,
           'role': 'user',
           'store_id': null,

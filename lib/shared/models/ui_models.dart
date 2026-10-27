@@ -1,3 +1,7 @@
+import 'dart:math';
+
+import '../../core/utils/market_prices.dart';
+
 import 'category_model.dart';
 import 'price_entry_model.dart';
 import 'commodity_model.dart';
@@ -12,9 +16,13 @@ class DashboardData {
     required this.watchlistCount,
     required this.reportsCount,
     required this.storeCount,
+    this.commodityCounts = const {},
   });
 
   final List<CategoryModel> categories;
+
+  /// Number of commodities in each category, keyed by category id.
+  final Map<int, int> commodityCounts;
   final List<CommodityOverview> featuredProducts;
   final List<PriceUpdateItem> latestUpdates;
   final int unreadNotifications;
@@ -28,35 +36,94 @@ class CommodityOverview {
     required this.id,
     required this.categoryId,
     required this.categoryName,
+    this.subcategoryId,
+    this.subcategoryName,
     required this.name,
     required this.unit,
     required this.srp,
     required this.latestAveragePrice,
     required this.latestUpdatedAt,
+    this.storeCount = 0,
     required this.isWatched,
   });
 
   final int id;
   final int categoryId;
   final String categoryName;
+  final int? subcategoryId;
+  final String? subcategoryName;
   final String name;
   final String unit;
   final double srp;
   final double latestAveragePrice;
   final String latestUpdatedAt;
+
+  /// Stores whose current price makes up [latestAveragePrice].
+  final int storeCount;
   final bool isWatched;
 
   double get varianceFromSrp => latestAveragePrice - srp;
+
+  /// False when no store price is recorded and the SRP is shown instead.
+  bool get hasRecordedPrice => latestUpdatedAt.isNotEmpty;
+
+  /// The newest recorded price is older than [stalePriceAge].
+  bool get isStale => hasRecordedPrice && isStalePrice(latestUpdatedAt);
+}
+
+/// Price summary for the commodities in one sub-category, such as Bangus.
+class SubcategoryPriceSummary {
+  const SubcategoryPriceSummary({
+    required this.subcategoryId,
+    required this.name,
+    required this.commodityCount,
+    required this.pricedCount,
+    required this.lowestPrice,
+    required this.highestPrice,
+    required this.averagePrice,
+  });
+
+  final int subcategoryId;
+  final String name;
+  final int commodityCount;
+  final int pricedCount;
+  final double? lowestPrice;
+  final double? highestPrice;
+  final double? averagePrice;
+
+  factory SubcategoryPriceSummary.fromCommodities({
+    required int subcategoryId,
+    required String name,
+    required List<CommodityOverview> commodities,
+  }) {
+    final prices = commodities
+        .where((item) => item.hasRecordedPrice)
+        .map((item) => item.latestAveragePrice)
+        .toList();
+    return SubcategoryPriceSummary(
+      subcategoryId: subcategoryId,
+      name: name,
+      commodityCount: commodities.length,
+      pricedCount: prices.length,
+      lowestPrice: prices.isEmpty ? null : prices.reduce(min),
+      highestPrice: prices.isEmpty ? null : prices.reduce(max),
+      averagePrice: prices.isEmpty
+          ? null
+          : prices.reduce((a, b) => a + b) / prices.length,
+    );
+  }
 }
 
 class PriceUpdateItem {
   const PriceUpdateItem({
+    this.commodityId,
     required this.commodityName,
     required this.storeName,
     required this.price,
     required this.recordedAt,
   });
 
+  final int? commodityId;
   final String commodityName;
   final String storeName;
   final double price;
@@ -120,9 +187,12 @@ class CommodityDetailData {
   const CommodityDetailData({
     required this.commodity,
     required this.category,
+    this.subcategoryName,
     required this.latestStorePrices,
     this.priceEntries = const [],
     required this.history,
+    this.hasRecordedPrice = true,
+    this.latestRecordedAt,
     required this.averagePrice,
     required this.lowestPrice,
     required this.highestPrice,
@@ -132,9 +202,14 @@ class CommodityDetailData {
 
   final CommodityModel commodity;
   final CategoryModel category;
+  final String? subcategoryName;
   final List<StorePriceSnapshot> latestStorePrices;
   final List<PriceEntryModel> priceEntries;
   final List<PriceHistoryPoint> history;
+
+  /// False when no active store has a price; the stats then show the SRP.
+  final bool hasRecordedPrice;
+  final String? latestRecordedAt;
   final double averagePrice;
   final double lowestPrice;
   final double highestPrice;

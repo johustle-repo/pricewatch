@@ -8,6 +8,8 @@ import '../../admin/presentation/widgets/admin_page_frame.dart';
 import '../../../shared/widgets/app_shell_menu_button.dart';
 import '../../../shared/widgets/app_seal_badge.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
+import '../../../shared/widgets/theme_mode_button.dart';
+import '../../../shared/widgets/pricewatch_help.dart';
 
 class MainNavigationScreen extends StatelessWidget {
   const MainNavigationScreen({super.key, required this.navigationShell});
@@ -60,52 +62,39 @@ class MainNavigationScreen extends StatelessWidget {
             ),
           ]
         : [
-            const _ShellNavItem(
-              icon: Icons.apps_rounded,
-              label: 'Modules',
-              branchIndex: 0,
-              route: '/modules',
-            ),
+            // Buyers get five destinations; stores, QR scanning and vendor
+            // incidents are reached from within Prices and Reports.
             const _ShellNavItem(
               icon: Icons.home_rounded,
               label: 'Home',
-              branchIndex: 1,
               route: '/home',
+              matchPrefixes: ['/notifications'],
             ),
             const _ShellNavItem(
-              icon: Icons.inventory_2_rounded,
-              label: 'Products',
+              icon: Icons.sell_rounded,
+              label: 'Prices',
               route: '/commodities',
-              matchPrefixes: ['/commodity/', '/categories'],
-            ),
-            const _ShellNavItem(
-              icon: Icons.storefront_rounded,
-              label: 'Stores',
-              route: '/stores',
-              matchPrefixes: ['/store/'],
-            ),
-            const _ShellNavItem(
-              icon: Icons.gpp_bad_rounded,
-              label: 'Vendor Incidents',
-              route: '/incidents',
-              matchPrefixes: ['/incident/'],
+              matchPrefixes: [
+                '/commodity/',
+                '/categories',
+                '/stores',
+                '/store/',
+              ],
             ),
             const _ShellNavItem(
               icon: Icons.bookmark_rounded,
               label: 'Watchlist',
-              branchIndex: 2,
               route: '/watchlist',
             ),
             const _ShellNavItem(
-              icon: Icons.qr_code_scanner_rounded,
-              label: 'Scan QR',
-              branchIndex: 3,
-              route: '/scan-qr',
+              icon: Icons.flag_rounded,
+              label: 'Reports',
+              route: '/reports',
+              matchPrefixes: ['/report/', '/scan-qr', '/incident'],
             ),
             const _ShellNavItem(
               icon: Icons.person_rounded,
               label: 'Profile',
-              branchIndex: 4,
               route: '/profile',
               matchPrefixes: ['/profile/'],
             ),
@@ -151,6 +140,67 @@ class MainNavigationScreen extends StatelessWidget {
         onLogout: () => _logout(context),
         onTap: (item) => _goToItem(context, navigationShell, item),
         child: shellContent,
+      );
+    }
+
+    if (!isVendor) {
+      // Buyers below the desktop breakpoint use a bottom tab bar instead of a
+      // drawer, so every main area is one tap away.
+      final selectedIndex = items.indexWhere(
+        (item) =>
+            item.isSelected(currentLocation, navigationShell.currentIndex),
+      );
+      final accent = AppColors.accentFor(context);
+      final scaffold = Scaffold(
+        body: shellContent,
+        bottomNavigationBar: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            backgroundColor: AppColors.surfaceFor(context),
+            indicatorColor: accent.withValues(alpha: 0.14),
+            surfaceTintColor: Colors.transparent,
+            height: 68,
+            labelTextStyle: WidgetStateProperty.resolveWith(
+              (states) => Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontWeight: states.contains(WidgetState.selected)
+                    ? FontWeight.w800
+                    : FontWeight.w600,
+                color: states.contains(WidgetState.selected)
+                    ? accent
+                    : AppColors.textSecondaryFor(context),
+              ),
+            ),
+            iconTheme: WidgetStateProperty.resolveWith(
+              (states) => IconThemeData(
+                color: states.contains(WidgetState.selected)
+                    ? accent
+                    : AppColors.textSecondaryFor(context),
+              ),
+            ),
+          ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: navBorder)),
+            ),
+            child: NavigationBar(
+              selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              onDestinationSelected: (index) =>
+                  _goToItem(context, navigationShell, items[index]),
+              destinations: [
+                for (final item in items)
+                  NavigationDestination(
+                    icon: Icon(item.icon),
+                    label: item.label,
+                    tooltip: item.label,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+      return ColoredBox(
+        color: AppColors.backgroundFor(context),
+        child: SafeArea(bottom: false, child: scaffold),
       );
     }
 
@@ -607,10 +657,9 @@ class _VendorWebShell extends StatelessWidget {
 
   String _titleForLocation(String location, int index) {
     if (location == '/modules') return 'Community Dashboard';
-    if (location == '/home') return 'Market Overview';
-    if (location == '/commodities' || location.startsWith('/commodity/')) {
-      return 'Products & Prices';
-    }
+    if (location == '/home') return 'Home';
+    if (location == '/commodities') return 'Prices';
+    if (location.startsWith('/commodity/')) return 'Price details';
     if (location == '/categories') return 'Product Categories';
     if (location == '/stores' || location.startsWith('/store/')) {
       return 'Markets & Stores';
@@ -801,7 +850,7 @@ class _CommunityTopBar extends StatelessWidget {
                     Text(
                       'PRICEWATCH',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.primary,
+                        color: AppColors.accentFor(context),
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1,
                       ),
@@ -846,6 +895,8 @@ class _CommunityTopBar extends StatelessWidget {
             ),
             const SizedBox(width: 10),
           ],
+          const PriceWatchGuideButton(),
+          const ThemeModeButton(),
           IconButton(
             tooltip: 'Notifications',
             onPressed: onNotifications,
@@ -921,7 +972,7 @@ class _TopBarAction extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: AppColors.primary),
+            Icon(icon, size: 18, color: AppColors.accentFor(context)),
             const SizedBox(width: 8),
             Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
           ],
@@ -990,6 +1041,8 @@ class _VendorTopBar extends StatelessWidget {
               ],
             ),
           ),
+          const PriceWatchGuideButton(),
+          const ThemeModeButton(),
           IconButton(
             tooltip: 'Notifications',
             onPressed: onNotifications,
@@ -1028,6 +1081,7 @@ class _VendorTopBarChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = AppColors.readableFor(context, this.color);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(

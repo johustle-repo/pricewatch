@@ -38,6 +38,7 @@ class _ManageCommoditiesScreenState extends State<ManageCommoditiesScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final controller = context.read<AdminController>();
       await controller.loadCategories();
+      await controller.loadSubcategories();
       await controller.loadCommodities();
     });
   }
@@ -49,9 +50,16 @@ class _ManageCommoditiesScreenState extends State<ManageCommoditiesScreen> {
     final categoryMap = {
       for (final category in controller.categories) category.id: category.name,
     };
+    final subcategoryMap = {
+      for (final subcategory in controller.subcategories)
+        subcategory.id: subcategory.name,
+    };
     final query = _searchController.text.trim().toLowerCase();
     final visibleCommodities = controller.commodities.where((item) {
-      return (query.isEmpty || item.name.toLowerCase().contains(query)) &&
+      final subcategoryName = subcategoryMap[item.subcategoryId] ?? '';
+      return (query.isEmpty ||
+              item.name.toLowerCase().contains(query) ||
+              subcategoryName.toLowerCase().contains(query)) &&
           (_categoryFilter == null || item.categoryId == _categoryFilter);
     }).toList();
 
@@ -140,6 +148,7 @@ class _ManageCommoditiesScreenState extends State<ManageCommoditiesScreen> {
                           ),
                         );
                         final filter = DropdownButtonFormField<int?>(
+                          isExpanded: true,
                           initialValue: _categoryFilter,
                           decoration: const InputDecoration(
                             prefixIcon: Icon(Icons.filter_alt_outlined),
@@ -193,6 +202,7 @@ class _ManageCommoditiesScreenState extends State<ManageCommoditiesScreen> {
                         ? _CommoditiesTable(
                             commodities: visibleCommodities,
                             categoryMap: categoryMap,
+                            subcategoryMap: subcategoryMap,
                             onEdit: (commodity) => _openCommodityDialog(
                               controller.categories,
                               commodity: commodity,
@@ -205,22 +215,24 @@ class _ManageCommoditiesScreenState extends State<ManageCommoditiesScreen> {
                               children: [
                                 for (
                                   var i = 0;
-                                  i < controller.commodities.length;
+                                  i < visibleCommodities.length;
                                   i++
                                 ) ...[
                                   _CommodityRow(
-                                    item: controller.commodities[i],
+                                    item: visibleCommodities[i],
                                     categoryName:
-                                        categoryMap[controller
-                                            .commodities[i]
+                                        categoryMap[visibleCommodities[i]
                                             .categoryId] ??
                                         'Unknown',
+                                    subcategoryName:
+                                        subcategoryMap[visibleCommodities[i]
+                                            .subcategoryId],
                                     onEdit: () => _openCommodityDialog(
                                       controller.categories,
-                                      commodity: controller.commodities[i],
+                                      commodity: visibleCommodities[i],
                                     ),
                                   ),
-                                  if (i != controller.commodities.length - 1)
+                                  if (i != visibleCommodities.length - 1)
                                     const Padding(
                                       padding: EdgeInsets.symmetric(
                                         vertical: AppSpacing.md,
@@ -260,6 +272,8 @@ class _ManageCommoditiesScreenState extends State<ManageCommoditiesScreen> {
       return;
     }
     var selectedCategoryId = commodity?.categoryId ?? fallbackCategoryId;
+    var selectedSubcategoryId = commodity?.subcategoryId;
+    final subcategories = context.read<AdminController>().subcategories;
 
     await showDialog<void>(
       context: context,
@@ -273,6 +287,7 @@ class _ManageCommoditiesScreenState extends State<ManageCommoditiesScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<int>(
+                    isExpanded: true,
                     initialValue: selectedCategoryId,
                     decoration: const InputDecoration(labelText: 'Category'),
                     items: categories
@@ -284,10 +299,46 @@ class _ManageCommoditiesScreenState extends State<ManageCommoditiesScreen> {
                         )
                         .toList(),
                     onChanged: (value) {
-                      if (value != null) {
-                        setState(() => selectedCategoryId = value);
+                      if (value != null && value != selectedCategoryId) {
+                        setState(() {
+                          selectedCategoryId = value;
+                          selectedSubcategoryId = null;
+                        });
                       }
                     },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int?>(
+                    isExpanded: true,
+                    key: ValueKey(selectedCategoryId),
+                    initialValue:
+                        subcategories.any(
+                          (item) =>
+                              item.id == selectedSubcategoryId &&
+                              item.categoryId == selectedCategoryId,
+                        )
+                        ? selectedSubcategoryId
+                        : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Sub-category',
+                      helperText:
+                          'e.g. Bangus under Fish. Add sub-categories in Categories.',
+                    ),
+                    items: [
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text('None'),
+                      ),
+                      for (final item in subcategories.where(
+                        (item) => item.categoryId == selectedCategoryId,
+                      ))
+                        DropdownMenuItem<int?>(
+                          value: item.id,
+                          child: Text(item.name),
+                        ),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => selectedSubcategoryId = value),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -341,16 +392,26 @@ class _ManageCommoditiesScreenState extends State<ManageCommoditiesScreen> {
               if (!formKey.currentState!.validate()) {
                 return;
               }
-              await context.read<AdminController>().saveCommodity(
+              final saved = await context.read<AdminController>().saveCommodity(
                 id: commodity?.id,
                 categoryId: selectedCategoryId,
+                subcategoryId: selectedSubcategoryId,
                 name: nameController.text,
                 description: descriptionController.text,
                 unit: unitController.text,
                 srp: double.parse(srpController.text.trim()),
               );
-              if (context.mounted) {
+              if (saved && context.mounted) {
                 Navigator.of(context).pop();
+              } else if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      context.read<AdminController>().error ??
+                          'Could not save the commodity.',
+                    ),
+                  ),
+                );
               }
             },
             child: const Text('Save'),
@@ -390,20 +451,29 @@ class _CommoditiesTable extends StatelessWidget {
   const _CommoditiesTable({
     required this.commodities,
     required this.categoryMap,
+    required this.subcategoryMap,
     required this.onEdit,
     required this.onDelete,
   });
 
   final List<CommodityModel> commodities;
   final Map<int?, String> categoryMap;
+  final Map<int?, String> subcategoryMap;
   final ValueChanged<CommodityModel> onEdit;
   final ValueChanged<CommodityModel> onDelete;
 
   @override
   Widget build(BuildContext context) {
     return AdminDataTableCard(
-      minWidth: 960,
-      columns: const ['Commodity', 'Category', 'Unit', 'SRP', 'Actions'],
+      minWidth: 1080,
+      columns: const [
+        'Commodity',
+        'Category',
+        'Sub-category',
+        'Unit',
+        'SRP',
+        'Actions',
+      ],
       rows: [
         for (final item in commodities)
           DataRow(
@@ -423,7 +493,7 @@ class _CommoditiesTable extends StatelessWidget {
                           (categoryMap[item.categoryId] ?? item.name)
                               .toLowerCase(),
                         ),
-                        color: AppColors.primaryDark,
+                        color: AppColors.accentFor(context),
                         size: 20,
                       ),
                     ),
@@ -442,6 +512,7 @@ class _CommoditiesTable extends StatelessWidget {
                 ),
               ),
               DataCell(Text(categoryMap[item.categoryId] ?? 'Unknown')),
+              DataCell(Text(subcategoryMap[item.subcategoryId] ?? '—')),
               DataCell(Text(item.unit)),
               DataCell(Text(item.srp.toStringAsFixed(2))),
               DataCell(
@@ -473,11 +544,13 @@ class _CommodityRow extends StatelessWidget {
   const _CommodityRow({
     required this.item,
     required this.categoryName,
+    required this.subcategoryName,
     required this.onEdit,
   });
 
   final CommodityModel item;
   final String categoryName;
+  final String? subcategoryName;
   final VoidCallback onEdit;
 
   @override
@@ -494,7 +567,7 @@ class _CommodityRow extends StatelessWidget {
           ),
           child: Icon(
             AppIconMapper.fromKey(categoryName.toLowerCase()),
-            color: AppColors.primaryDark,
+            color: AppColors.accentFor(context),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
@@ -512,7 +585,7 @@ class _CommodityRow extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '$categoryName | ${item.unit}',
+                [categoryName, ?subcategoryName, item.unit].join(' | '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(

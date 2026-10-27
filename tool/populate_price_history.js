@@ -2,21 +2,17 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
-const constants = fs.readFileSync(
-  path.join(root, 'lib/core/constants/app_constants.dart'),
-  'utf8',
-);
 const firebaseOptions = fs.readFileSync(
   path.join(root, 'lib/firebase_options.dart'),
   'utf8',
 );
 
-const readDartConstant = (name) => {
-  const match = constants.match(
-    new RegExp(`demo${name}\\s*=\\s*'([^']+)'`),
-  );
-  if (!match) throw new Error(`Could not read demo${name}.`);
-  return match[1];
+// Admin credentials come from the environment, never from app source:
+// PRICEWATCH_ADMIN_EMAIL=... PRICEWATCH_ADMIN_PASSWORD=... node tool/...
+const readAdminCredential = (name) => {
+  const value = process.env[`PRICEWATCH_ADMIN_${name}`];
+  if (!value) throw new Error(`Set PRICEWATCH_ADMIN_${name} to run this tool.`);
+  return value;
 };
 
 const apiKey = firebaseOptions.match(/apiKey:\s*'([^']+)'/)?.[1];
@@ -95,8 +91,8 @@ async function main() {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        email: readDartConstant('AdminEmail'),
-        password: readDartConstant('AdminPassword'),
+        email: readAdminCredential('EMAIL'),
+        password: readAdminCredential('PASSWORD'),
         returnSecureToken: true,
       }),
     },

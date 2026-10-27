@@ -1,9 +1,10 @@
 import '../../../core/database/cloud_data_service.dart';
 import '../../../core/utils/app_formatters.dart';
 import '../../../core/utils/date_time_utils.dart';
-import '../../../shared/models/app_notification_model.dart';
+import '../../../core/utils/market_prices.dart';
 import '../../../shared/models/commodity_model.dart';
 import '../../../shared/models/price_entry_model.dart';
+import '../../../shared/models/store_model.dart';
 import '../../../shared/models/watchlist_model.dart';
 import '../../../shared/models/ui_models.dart';
 
@@ -14,23 +15,13 @@ class WatchlistRepository {
   final CloudDataService _cloudDataService;
 
   Future<List<WatchlistViewData>> getWatchlist(int userId) async {
-    final watchlists =
-        (await _cloudDataService.getCollectionWhere(
-              'watchlists',
-              field: 'user_id',
-              value: userId,
-            ))
-            .map(WatchlistModel.fromMap)
-            .where((item) => item.userId == userId)
-            .toList();
+    final watchlists = await _watchlistsFor(userId);
     final commodities = (await _cloudDataService.getCollection(
       'commodities',
     )).map(CommodityModel.fromMap).toList();
-    final priceEntries = (await _cloudDataService.getCollection(
-      'price_entries',
-    )).map(PriceEntryModel.fromMap).toList();
+    final entriesByCommodity = await _activeEntriesFor(watchlists);
 
-    await _syncThresholdAlerts(userId, watchlists, commodities, priceEntries);
+    await _syncAlerts(userId, watchlists, commodities, entriesByCommodity);
 
     final data =
         watchlists
@@ -42,20 +33,8 @@ class WatchlistRepository {
               if (watchId == null || commodity == null) {
                 return null;
               }
-              final current = _averageAtPosition(
-                priceEntries,
-                watch.commodityId,
-                0,
-              );
-              final previous = _averageAtPosition(
-                priceEntries,
-                watch.commodityId,
-                1,
-              );
-              final history = _historyForCommodity(
-                priceEntries,
-                watch.commodityId,
-              );
+              final entries = entriesByCommodity[watch.commodityId] ?? [];
+              final market = currentMarketPrice(entries);
               return WatchlistViewData(
                 watchlistId: watchId,
                 commodityId: watch.commodityId,
@@ -63,10 +42,10 @@ class WatchlistRepository {
                 unit: commodity.unit,
                 srp: commodity.srp,
                 threshold: watch.priceThreshold,
-                currentPrice: current.$1,
-                previousPrice: previous.$1,
-                updatedAt: current.$2,
-                history: history,
+                currentPrice: market.average ?? 0,
+                previousPrice: market.previousAverage ?? 0,
+                updatedAt: market.latestRecordedAt ?? '',
+                history: _historyForCommodity(entries, watch.commodityId),
               );
             })
             .nonNulls
@@ -74,6 +53,64 @@ class WatchlistRepository {
           ..sort((a, b) => a.commodityName.compareTo(b.commodityName));
 
     return data;
+  }
+
+  /// Creates notifications for prices recorded on the user's watched items
+  /// since the last check, from any source (admin, vendor, CSV or survey).
+  /// Runs on the user's own device, so no server function is needed.
+  Future<void> syncWatchAlerts(int userId) async {
+    final watchlists = await _watchlistsFor(userId);
+    if (watchlists.isEmpty) return;
+    final commodities = (await _cloudDataService.getCollection(
+      'commodities',
+    )).map(CommodityModel.fromMap).toList();
+    await _syncAlerts(
+      userId,
+      watchlists,
+      commodities,
+      await _activeEntriesFor(watchlists),
+    );
+  }
+
+  Future<List<WatchlistModel>> _watchlistsFor(int userId) async {
+    return (await _cloudDataService.getCollectionWhere(
+          'watchlists',
+          field: 'user_id',
+          value: userId,
+        ))
+        .map(WatchlistModel.fromMap)
+        .where((item) => item.userId == userId)
+        .toList();
+  }
+
+  /// Price entries of the watched commodities from active stores only.
+  Future<Map<int, List<PriceEntryModel>>> _activeEntriesFor(
+    List<WatchlistModel> watchlists,
+  ) async {
+    final commodityIds = watchlists
+        .map((item) => item.commodityId)
+        .toSet()
+        .toList();
+    final activeStoreIds = (await _cloudDataService.getCollection('stores'))
+        .map(StoreModel.fromMap)
+        .where((item) => !item.isArchived)
+        .map((item) => item.id)
+        .nonNulls
+        .toSet();
+    final rows = await _cloudDataService.getCollectionWhereIn(
+      'price_entries',
+      field: 'commodity_id',
+      values: commodityIds,
+    );
+    final byCommodity = <int, List<PriceEntryModel>>{};
+    for (final entry in rows.map(PriceEntryModel.fromMap)) {
+      if (!commodityIds.contains(entry.commodityId) ||
+          !activeStoreIds.contains(entry.storeId)) {
+        continue;
+      }
+      byCommodity.putIfAbsent(entry.commodityId, () => []).add(entry);
+    }
+    return byCommodity;
   }
 
   List<PriceHistoryPoint> _historyForCommodity(
@@ -168,84 +205,82 @@ class WatchlistRepository {
     await _cloudDataService.deleteDocument('watchlists', watchlistId);
   }
 
-  (double, String) _averageAtPosition(
-    List<PriceEntryModel> entries,
-    int commodityId,
-    int offset,
-  ) {
-    final commodityEntries =
-        entries.where((item) => item.commodityId == commodityId).toList()
-          ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-    final timestamps =
-        commodityEntries.map((item) => item.recordedAt).toSet().toList()
-          ..sort((a, b) => b.compareTo(a));
-    if (offset >= timestamps.length) {
-      return (0.0, '');
-    }
-    final timestamp = timestamps[offset];
-    final atTimestamp = commodityEntries
-        .where((item) => item.recordedAt == timestamp)
-        .toList();
-    final average =
-        atTimestamp.map((item) => item.price).reduce((a, b) => a + b) /
-        atTimestamp.length;
-    return (average, timestamp);
-  }
-
-  Future<void> _syncThresholdAlerts(
+  Future<void> _syncAlerts(
     int userId,
     List<WatchlistModel> watchlists,
     List<CommodityModel> commodities,
-    List<PriceEntryModel> priceEntries,
+    Map<int, List<PriceEntryModel>> entriesByCommodity,
   ) async {
-    final notifications =
-        (await _cloudDataService.getCollectionWhere(
-              'notifications',
-              field: 'user_id',
-              value: userId,
-            ))
-            .map(AppNotificationModel.fromMap)
-            .where((item) => item.userId == userId)
-            .toList();
-
-    for (final watch in watchlists.where(
-      (item) => item.priceThreshold != null,
-    )) {
-      final current = _averageAtPosition(priceEntries, watch.commodityId, 0);
-      final threshold = watch.priceThreshold;
-      if (threshold == null || current.$1 <= threshold) {
-        continue;
-      }
-
+    for (final watch in watchlists) {
+      final watchId = watch.id;
       final commodity = commodities
           .where((item) => item.id == watch.commodityId)
           .firstOrNull;
-      if (commodity == null) {
-        continue;
-      }
-      final title = 'Price threshold reached';
-      final body =
-          '${commodity.name} is at ${AppFormatters.currency(current.$1)}, above your alert threshold of ${AppFormatters.currency(threshold)}.';
-      final exists = notifications.any(
-        (item) =>
-            item.title == title &&
-            item.body == body &&
-            item.type == 'price_increase',
+      if (watchId == null || commodity == null) continue;
+
+      final entries = entriesByCommodity[watch.commodityId] ?? const [];
+      final checkedUntil = watch.lastAlertedAt ?? watch.createdAt;
+      final newEntries = entries
+          .where((entry) => entry.recordedAt.compareTo(checkedUntil) > 0)
+          .toList();
+      if (newEntries.isEmpty) continue;
+
+      final market = currentMarketPrice(entries);
+      final average = market.average;
+      final count = newEntries.length;
+      await _notify(
+        userId,
+        title: 'Watched item updated',
+        body: average == null
+            ? '${commodity.name}: $count new price${count == 1 ? '' : 's'} recorded.'
+            : '${commodity.name}: $count new price${count == 1 ? '' : 's'} recorded. '
+                  'Market average is now ${AppFormatters.currency(average)} '
+                  'across ${market.storeCount} store${market.storeCount == 1 ? '' : 's'}.',
+        type: 'watched_item_updated',
       );
-      if (exists) {
-        continue;
+
+      final threshold = watch.priceThreshold;
+      if (threshold != null && average != null && average > threshold) {
+        await _notify(
+          userId,
+          title: 'Price threshold reached',
+          body:
+              '${commodity.name} is at ${AppFormatters.currency(average)}, above your alert threshold of ${AppFormatters.currency(threshold)}.',
+          type: 'price_increase',
+        );
       }
 
-      final id = _cloudDataService.generateId();
-      await _cloudDataService.setDocument('notifications', id, {
-        'id': id,
-        'user_id': userId,
-        'title': title,
-        'body': body,
-        'type': 'price_increase',
-        'is_read': 0,
-        'created_at': DateTimeUtils.nowIso(),
-      });
+      final newest = newEntries
+          .map((entry) => entry.recordedAt)
+          .reduce((a, b) => a.compareTo(b) > 0 ? a : b);
+      final existing = await _cloudDataService.getDocument(
+        'watchlists',
+        watchId,
+      );
+      if (existing != null) {
+        await _cloudDataService.setDocument('watchlists', watchId, {
+          ...existing,
+          'last_alerted_at': newest,
+        });
+      }
     }
+  }
+
+  Future<void> _notify(
+    int userId, {
+    required String title,
+    required String body,
+    required String type,
+  }) async {
+    final id = _cloudDataService.generateId();
+    await _cloudDataService.setDocument('notifications', id, {
+      'id': id,
+      'user_id': userId,
+      'title': title,
+      'body': body,
+      'type': type,
+      'is_read': 0,
+      'created_at': DateTimeUtils.nowIso(),
+    });
   }
 }

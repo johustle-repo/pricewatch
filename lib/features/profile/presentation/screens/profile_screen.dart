@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../shared/widgets/pricewatch_help.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -14,6 +13,9 @@ import '../../../../shared/widgets/app_surface_card.dart';
 import '../../../../shared/widgets/responsive_page.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/profile_controller.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../admin/presentation/widgets/admin_page_frame.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -22,7 +24,8 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthController>();
     final user = auth.currentUser;
-    final useWebShell = MediaQuery.sizeOf(context).width >= 1024;
+    final useWebShell =
+        MediaQuery.sizeOf(context).width >= adminWebLayoutBreakpoint;
 
     return Scaffold(
       appBar: useWebShell
@@ -30,7 +33,11 @@ class ProfileScreen extends StatelessWidget {
           : AppBar(
               leading: const AppShellMenuButton(),
               title: const Text('Profile'),
-              actions: [const AppNotificationButton()],
+              actions: const [
+                PriceWatchGuideButton(),
+                ThemeModeButton(),
+                AppNotificationButton(),
+              ],
             ),
       body: user == null
           ? const SizedBox.shrink()
@@ -44,8 +51,6 @@ class ProfileScreen extends StatelessWidget {
                 edgeToEdgeDesktopOnly: true,
                 child: ListView(
                   children: [
-                    const PriceWatchHelp(),
-
                     Container(
                       padding: const EdgeInsets.all(AppSpacing.xl),
                       decoration: BoxDecoration(
@@ -149,6 +154,50 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: AppSpacing.md),
                     AppSurfaceCard(
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.palette_outlined,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Appearance',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    Text(
+                                      'Choose light, dark, or match your device.',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          const SizedBox(
+                            width: double.infinity,
+                            child: ThemeModeSelector(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    AppSurfaceCard(
+                      child: Column(
                         children: [
                           _SettingsTile(
                             icon: Icons.edit_outlined,
@@ -229,9 +278,9 @@ class ProfileScreen extends StatelessWidget {
                                 ),
                                 borderRadius: BorderRadius.circular(18),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.dashboard_customize_rounded,
-                                color: AppColors.primaryDark,
+                                color: AppColors.accentFor(context),
                               ),
                             );
                             final text = Column(
@@ -415,7 +464,7 @@ class _SettingsTile extends StatelessWidget {
           color: AppColors.backgroundAltFor(context),
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Icon(icon, color: AppColors.primaryDark),
+        child: Icon(icon, color: AppColors.accentFor(context)),
       ),
       title: Text(
         title,

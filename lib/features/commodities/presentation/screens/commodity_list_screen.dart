@@ -1,24 +1,31 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import '../../../../shared/widgets/pricewatch_help.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/app_formatters.dart';
+import '../../../../shared/models/category_model.dart';
+import '../../../../shared/models/subcategory_model.dart';
 import '../../../../shared/models/ui_models.dart';
 import '../../../../shared/widgets/app_background.dart';
-import '../../../../shared/widgets/app_seal_badge.dart';
-import '../../../../shared/widgets/app_search_field.dart';
-import '../../../../shared/widgets/app_shell_menu_button.dart';
+import '../../../../shared/widgets/app_notification_button.dart';
+import '../../../../shared/widgets/category_style.dart';
 import '../../../../shared/widgets/commodity_visual.dart';
 import '../../../../shared/widgets/empty_state_view.dart';
-import '../../../../shared/widgets/price_trend_badge.dart';
+import '../../../../shared/widgets/price_freshness_chip.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 import '../../../../shared/widgets/responsive_page.dart';
 import '../../../../shared/widgets/shimmer_skeleton.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../admin/presentation/widgets/admin_page_frame.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/commodity_controller.dart';
 
+/// Buyer price browser: pick a category, narrow to a sub-category, and read
+/// current prices grouped the same way the market survey is organized.
 class CommodityListScreen extends StatefulWidget {
   const CommodityListScreen({
     super.key,
@@ -35,631 +42,663 @@ class CommodityListScreen extends StatefulWidget {
 
 class _CommodityListScreenState extends State<CommodityListScreen> {
   late final TextEditingController _searchController;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController(text: widget.initialSearch);
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final auth = context.read<AuthController>();
-      final controller = context.read<CommodityController>();
-      await controller.loadCategories();
-      controller.setCategory(widget.initialCategoryId);
-      controller.setQuery(widget.initialSearch);
-      final userId = auth.currentUser?.id;
-      if (userId != null) {
-        await controller.loadCommodities(userId: userId);
-      }
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyRoute());
+  }
+
+  @override
+  void didUpdateWidget(covariant CommodityListScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Links from Home reuse this screen with a different category or search.
+    if (oldWidget.initialCategoryId != widget.initialCategoryId ||
+        oldWidget.initialSearch != widget.initialSearch) {
+      _searchController.text = widget.initialSearch;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _applyRoute());
+    }
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
+  Future<void> _applyRoute() async {
+    if (!mounted) return;
+    final controller = context.read<CommodityController>();
+    await controller.loadCategories();
+    controller.setCategory(widget.initialCategoryId);
+    controller.setQuery(widget.initialSearch);
+    await _reload();
+  }
+
+  Future<void> _reload() async {
+    final userId = context.read<AuthController>().currentUser?.id;
+    if (userId != null) {
+      await context.read<CommodityController>().loadCommodities(userId: userId);
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      context.read<CommodityController>().setQuery(value);
+      _reload();
+    });
+  }
+
+  void _selectCategory(int? categoryId) {
+    context.read<CommodityController>().setCategory(categoryId);
+    _reload();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthController>();
     final controller = context.watch<CommodityController>();
-    final userId = auth.currentUser?.id;
-    final useDark = AppColors.isDark(context);
-    final theme = Theme.of(context);
-    final useMobileHeader = MediaQuery.sizeOf(context).width < 720;
-    final useWebShell = MediaQuery.sizeOf(context).width >= 1024;
+    final useWebShell =
+        MediaQuery.sizeOf(context).width >= adminWebLayoutBreakpoint;
+    final selectedCategory = controller.categories
+        .where((item) => item.id == controller.selectedCategoryId)
+        .firstOrNull;
+    final sections = _buildSections(controller, selectedCategory);
+    final itemCount = sections.fold<int>(0, (sum, s) => sum + s.items.length);
+    final subcategoryCounts = <int, int>{};
+    for (final item in controller.commodities) {
+      final id = item.subcategoryId;
+      if (id != null) subcategoryCounts[id] = (subcategoryCounts[id] ?? 0) + 1;
+    }
 
     return Scaffold(
       appBar: useWebShell
           ? null
           : AppBar(
-              automaticallyImplyLeading: false,
-              leading: useMobileHeader ? null : const AppShellMenuButton(),
-              titleSpacing: useMobileHeader ? AppSpacing.xl : null,
-              title: useMobileHeader
-                  ? const Row(
-                      children: [
-                        AppSealBadge(size: 32, padding: 2.5, showFrame: false),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'PriceWatch',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    )
-                  : const Text('Commodities'),
-              actions: useMobileHeader
-                  ? [
-                      IconButton(
-                        tooltip: 'Markets and stores',
-                        onPressed: () => context.push('/stores'),
-                        icon: const Icon(Icons.storefront_outlined),
-                      ),
-                      IconButton(
-                        tooltip: 'Notifications',
-                        onPressed: () => context.push('/notifications'),
-                        icon: const Icon(Icons.notifications_none_rounded),
-                      ),
-                      const SizedBox(width: 8),
-                    ]
-                  : null,
+              titleSpacing: AppSpacing.md,
+              title: const Text('Prices'),
+              actions: [
+                IconButton(
+                  tooltip: 'Markets and stores',
+                  onPressed: () => context.push('/stores'),
+                  icon: const Icon(Icons.storefront_outlined),
+                ),
+                const PriceWatchGuideButton(),
+                const ThemeModeButton(),
+                const AppNotificationButton(),
+                const SizedBox(width: 4),
+              ],
             ),
       body: AppBackground(
         showTopGlow: false,
-        child: ResponsivePage(
-          maxWidth: 1160,
-          expandHeight: true,
-          horizontalPadding: 0,
-          topPadding: AppSpacing.sm,
-          bottomPadding: 0,
-          edgeToEdgeDesktopOnly: true,
-          child: RefreshIndicator(
-            onRefresh: () async {
-              if (userId != null) {
-                await controller.loadCommodities(userId: userId);
-              }
-            },
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(
-                parent: BouncingScrollPhysics(),
-              ),
-              padding: const EdgeInsets.only(bottom: AppSpacing.xl),
-              children: [
-                const PriceWatchHelp(),
-
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceFor(context),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppColors.borderFor(context)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.shadowFor(
-                          context,
-                        ).withValues(alpha: 0.12),
-                        blurRadius: 18,
-                        offset: const Offset(0, 10),
+        child: RefreshIndicator(
+          onRefresh: _reload,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              ResponsivePage(
+                maxWidth: 1120,
+                topPadding: AppSpacing.md,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _SearchBar(
+                      controller: _searchController,
+                      onChanged: _onSearchChanged,
+                      onClear: () {
+                        _searchController.clear();
+                        _onSearchChanged('');
+                      },
+                      showStoresLink: useWebShell,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _CategoryChips(
+                      categories: controller.categories,
+                      selectedId: controller.selectedCategoryId,
+                      onSelected: _selectCategory,
+                    ),
+                    if (selectedCategory != null &&
+                        controller.subcategories.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      _SubcategoryChips(
+                        category: selectedCategory,
+                        subcategories: controller.subcategories,
+                        counts: subcategoryCounts,
+                        selectedId: controller.selectedSubcategoryId,
+                        onSelected: controller.setSubcategory,
                       ),
                     ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Daily essentials',
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: AppColors.textPrimaryFor(context),
-                          fontWeight: FontWeight.w900,
+                    const SizedBox(height: AppSpacing.lg),
+                    if (controller.isLoading && controller.commodities.isEmpty)
+                      const ListLoadingView(cardCount: 6, shrinkWrap: true)
+                    else if (sections.isEmpty)
+                      EmptyStateView(
+                        title: 'No matching items',
+                        message: controller.query.trim().isEmpty
+                            ? 'No commodities are listed here yet.'
+                            : 'Nothing matches “${controller.query.trim()}”. Try another name or category.',
+                        icon: Icons.search_off_rounded,
+                      )
+                    else ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: Text(
+                          '$itemCount ${itemCount == 1 ? 'item' : 'items'}'
+                          '${selectedCategory == null ? '' : ' in ${selectedCategory.name}'}'
+                          ' · prices are the latest average across stores',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: AppColors.textSecondaryFor(context),
+                              ),
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'Search products, review price movement, and jump into details quickly.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textSecondaryFor(context),
-                          height: 1.45,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      AppSearchField(
-                        controller: _searchController,
-                        hintText: 'Search rice, eggs, fish, or vegetables...',
-                        onChanged: (value) async {
-                          controller.setQuery(value);
-                          if (userId != null) {
-                            await controller.loadCommodities(userId: userId);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          ChoiceChip(
-                            label: const Text('All'),
-                            selected: controller.selectedCategoryId == null,
-                            selectedColor: useDark
-                                ? AppColors.darkPrimary
-                                : AppColors.primaryDark,
-                            backgroundColor: AppColors.surfaceMutedFor(context),
-                            labelStyle: theme.textTheme.labelMedium?.copyWith(
-                              color: controller.selectedCategoryId == null
-                                  ? Colors.white
-                                  : AppColors.textPrimaryFor(context),
-                              fontWeight: FontWeight.w800,
-                            ),
-                            side: BorderSide(
-                              color: controller.selectedCategoryId == null
-                                  ? Colors.transparent
-                                  : AppColors.borderFor(context),
-                            ),
-                            onSelected: (_) async {
-                              controller.setCategory(null);
-                              if (userId != null) {
-                                await controller.loadCommodities(
-                                  userId: userId,
-                                );
-                              }
-                            },
-                          ),
-                          ...controller.categories.map(
-                            (category) => ChoiceChip(
-                              label: Text(category.name),
-                              selected:
-                                  controller.selectedCategoryId == category.id,
-                              selectedColor: useDark
-                                  ? AppColors.darkPrimary
-                                  : AppColors.primaryDark,
-                              backgroundColor: AppColors.surfaceMutedFor(
-                                context,
-                              ),
-                              labelStyle: theme.textTheme.labelMedium?.copyWith(
-                                color:
-                                    controller.selectedCategoryId == category.id
-                                    ? Colors.white
-                                    : AppColors.textPrimaryFor(context),
-                                fontWeight: FontWeight.w800,
-                              ),
-                              side: BorderSide(
-                                color:
-                                    controller.selectedCategoryId == category.id
-                                    ? Colors.transparent
-                                    : AppColors.borderFor(context),
-                              ),
-                              onSelected: (_) async {
-                                controller.setCategory(category.id);
-                                if (userId != null) {
-                                  await controller.loadCommodities(
-                                    userId: userId,
-                                  );
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
+                      for (final section in sections) ...[
+                        _SectionBlock(section: section),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
                     ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                if (controller.isLoading)
-                  const ListLoadingView(cardCount: 7, shrinkWrap: true)
-                else if (controller.commodities.isEmpty)
-                  const EmptyStateView(
-                    title: 'No commodities found',
-                    message:
-                        'Try another category or search keyword to see local items.',
-                  )
-                else if (MediaQuery.sizeOf(context).width >= 1024)
-                  _CommodityDesktopTable(items: controller.commodities)
-                else
-                  for (
-                    var index = 0;
-                    index < controller.commodities.length;
-                    index++
-                  ) ...[
-                    _CommodityListCard(item: controller.commodities[index]),
-                    if (index < controller.commodities.length - 1)
-                      const SizedBox(height: 14),
                   ],
-              ],
-            ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
+
+  /// Groups by sub-category inside a chosen category, otherwise by category.
+  List<_Section> _buildSections(
+    CommodityController controller,
+    CategoryModel? selectedCategory,
+  ) {
+    final items = controller.selectedSubcategoryId == null
+        ? controller.commodities
+        : controller.commodities
+              .where(
+                (item) =>
+                    item.subcategoryId == controller.selectedSubcategoryId,
+              )
+              .toList();
+    if (items.isEmpty) return const [];
+
+    if (selectedCategory != null) {
+      final sections = <_Section>[
+        for (final sub in controller.subcategories)
+          _Section(
+            title: sub.name,
+            iconKey: selectedCategory.icon,
+            items: items.where((item) => item.subcategoryId == sub.id).toList(),
+          ),
+        _Section(
+          title: controller.subcategories.isEmpty
+              ? selectedCategory.name
+              : 'Other ${selectedCategory.name.toLowerCase()}',
+          iconKey: selectedCategory.icon,
+          items: items.where((item) => item.subcategoryId == null).toList(),
+        ),
+      ];
+      return sections.where((section) => section.items.isNotEmpty).toList();
+    }
+
+    return [
+      for (final category in controller.categories)
+        _Section(
+          title: category.name,
+          iconKey: category.icon,
+          showSubcategory: true,
+          items: items.where((item) => item.categoryId == category.id).toList(),
+        ),
+    ].where((section) => section.items.isNotEmpty).toList();
+  }
 }
 
-class _CommodityDesktopTable extends StatefulWidget {
-  const _CommodityDesktopTable({required this.items});
+class _Section {
+  const _Section({
+    required this.title,
+    required this.iconKey,
+    required this.items,
+    this.showSubcategory = false,
+  });
+
+  final String title;
+  final String? iconKey;
   final List<CommodityOverview> items;
 
-  @override
-  State<_CommodityDesktopTable> createState() => _CommodityDesktopTableState();
+  /// Rows name their sub-category when the section is a whole category.
+  final bool showSubcategory;
 }
 
-class _CommodityDesktopTableState extends State<_CommodityDesktopTable> {
-  String _status = 'all';
-  bool _ascending = true;
-  int _page = 0;
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+    required this.showStoresLink,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+  final bool showStoresLink;
 
   @override
   Widget build(BuildContext context) {
-    final items =
-        widget.items
-            .where(
-              (item) => switch (_status) {
-                'above' => item.varianceFromSrp > 0,
-                'below' => item.varianceFromSrp < 0,
-                'at' => item.varianceFromSrp == 0,
-                'watched' => item.isWatched,
-                _ => true,
-              },
-            )
-            .toList()
-          ..sort((a, b) => (_ascending ? 1 : -1) * a.name.compareTo(b.name));
-    final pageCount = items.isEmpty ? 1 : (items.length / 10).ceil();
-    if (_page >= pageCount) _page = pageCount - 1;
-    final pageItems = items.skip(_page * 10).take(10).toList();
-    return Column(
+    final field = TextField(
+      controller: controller,
+      onChanged: onChanged,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: 'Search rice, bangus, eggs, tomato…',
+        prefixIcon: const Icon(Icons.search_rounded),
+        suffixIcon: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: controller,
+          builder: (context, value, _) => value.text.isEmpty
+              ? const SizedBox.shrink()
+              : IconButton(
+                  tooltip: 'Clear search',
+                  onPressed: onClear,
+                  icon: const Icon(Icons.close_rounded),
+                ),
+        ),
+      ),
+    );
+    if (!showStoresLink) return field;
+    return Row(
       children: [
-        Row(
-          children: [
-            Text(
-              '${items.length} matching products',
-              style: TextStyle(
-                color: AppColors.textSecondaryFor(context),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: 170,
-              child: DropdownButtonFormField<String>(
-                initialValue: _status,
-                decoration: const InputDecoration(
-                  labelText: 'Price status',
-                  isDense: true,
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'all', child: Text('All prices')),
-                  DropdownMenuItem(value: 'above', child: Text('Above SRP')),
-                  DropdownMenuItem(value: 'at', child: Text('At SRP')),
-                  DropdownMenuItem(value: 'below', child: Text('Below SRP')),
-                  DropdownMenuItem(value: 'watched', child: Text('Watched')),
-                ],
-                onChanged: (value) => setState(() {
-                  _status = value ?? 'all';
-                  _page = 0;
-                }),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceFor(context),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.borderFor(context)),
-          ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowColor: WidgetStatePropertyAll(
-                AppColors.surfaceMutedFor(context),
-              ),
-              sortColumnIndex: 0,
-              sortAscending: _ascending,
-              columns: [
-                DataColumn(
-                  label: const Text('Commodity'),
-                  onSort: (_, ascending) => setState(() {
-                    _ascending = ascending;
-                    _page = 0;
-                  }),
-                ),
-                const DataColumn(label: Text('Category')),
-                const DataColumn(label: Text('Unit')),
-                const DataColumn(label: Text('Current'), numeric: true),
-                const DataColumn(label: Text('SRP'), numeric: true),
-                const DataColumn(label: Text('Variance')),
-                const DataColumn(label: Text('Updated')),
-                const DataColumn(label: Text('')),
-              ],
-              rows: [
-                for (final item in pageItems)
-                  DataRow(
-                    onSelectChanged: (_) =>
-                        context.push('/commodity/${item.id}'),
-                    cells: [
-                      DataCell(
-                        Row(
-                          children: [
-                            CommodityVisual(
-                              label: item.name,
-                              category: item.categoryName,
-                              size: 38,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              item.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            if (item.isWatched) ...[
-                              const SizedBox(width: 7),
-                              const Icon(
-                                Icons.bookmark_rounded,
-                                size: 15,
-                                color: AppColors.primary,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      DataCell(Text(item.categoryName)),
-                      DataCell(Text(item.unit)),
-                      DataCell(
-                        Text(AppFormatters.currency(item.latestAveragePrice)),
-                      ),
-                      DataCell(Text(AppFormatters.currency(item.srp))),
-                      DataCell(
-                        PriceTrendBadge(
-                          delta: item.varianceFromSrp,
-                          label: item.varianceFromSrp > 0
-                              ? 'Above SRP'
-                              : item.varianceFromSrp < 0
-                              ? 'Below SRP'
-                              : 'At SRP',
-                        ),
-                      ),
-                      DataCell(Text(AppFormatters.date(item.latestUpdatedAt))),
-                      const DataCell(Icon(Icons.chevron_right_rounded)),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        _TablePager(
-          page: _page,
-          pageCount: pageCount,
-          onPrevious: _page == 0 ? null : () => setState(() => _page--),
-          onNext: _page + 1 >= pageCount ? null : () => setState(() => _page++),
+        Expanded(child: field),
+        const SizedBox(width: AppSpacing.sm),
+        OutlinedButton.icon(
+          onPressed: () => context.push('/stores'),
+          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 52)),
+          icon: const Icon(Icons.storefront_outlined),
+          label: const Text('Markets & stores'),
         ),
       ],
     );
   }
 }
 
-class _TablePager extends StatelessWidget {
-  const _TablePager({
-    required this.page,
-    required this.pageCount,
-    this.onPrevious,
-    this.onNext,
+class _CategoryChips extends StatelessWidget {
+  const _CategoryChips({
+    required this.categories,
+    required this.selectedId,
+    required this.onSelected,
   });
-  final int page;
-  final int pageCount;
-  final VoidCallback? onPrevious;
-  final VoidCallback? onNext;
+
+  final List<CategoryModel> categories;
+  final int? selectedId;
+  final ValueChanged<int?> onSelected;
+
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisAlignment: MainAxisAlignment.end,
-    children: [
-      Text('Page ${page + 1} of $pageCount'),
-      const SizedBox(width: 8),
-      IconButton(
-        tooltip: 'Previous page',
-        onPressed: onPrevious,
-        icon: const Icon(Icons.chevron_left_rounded),
-      ),
-      IconButton(
-        tooltip: 'Next page',
-        onPressed: onNext,
-        icon: const Icon(Icons.chevron_right_rounded),
-      ),
-    ],
+  Widget build(BuildContext context) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(
+      children: [
+        _Chip(
+          label: 'All',
+          icon: Icons.apps_rounded,
+          selected: selectedId == null,
+          color: AppColors.accentFor(context),
+          onTap: () => onSelected(null),
+        ),
+        for (final category in categories) ...[
+          const SizedBox(width: 8),
+          _Chip(
+            label: category.name,
+            icon: CategoryStyle.icon(category.icon),
+            selected: selectedId == category.id,
+            color: CategoryStyle.color(context, category.icon),
+            onTap: () => onSelected(category.id),
+          ),
+        ],
+      ],
+    ),
   );
 }
 
-class _CommodityListCard extends StatelessWidget {
-  const _CommodityListCard({required this.item});
+class _SubcategoryChips extends StatelessWidget {
+  const _SubcategoryChips({
+    required this.category,
+    required this.subcategories,
+    required this.counts,
+    required this.selectedId,
+    required this.onSelected,
+  });
+
+  final CategoryModel category;
+  final List<SubcategoryModel> subcategories;
+  final Map<int, int> counts;
+  final int? selectedId;
+  final ValueChanged<int?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = CategoryStyle.color(context, category.icon);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _Chip(
+            label: 'All ${category.name.toLowerCase()}',
+            selected: selectedId == null,
+            color: color,
+            dense: true,
+            onTap: () => onSelected(null),
+          ),
+          for (final sub in subcategories)
+            if ((counts[sub.id] ?? 0) > 0) ...[
+              const SizedBox(width: 8),
+              _Chip(
+                label: '${sub.name} · ${counts[sub.id]}',
+                selected: selectedId == sub.id,
+                color: color,
+                dense: true,
+                onTap: () => onSelected(sub.id),
+              ),
+            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({
+    required this.label,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+    this.icon,
+    this.dense = false,
+  });
+
+  final String label;
+  final IconData? icon;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = selected
+        ? Colors.white
+        : AppColors.textPrimaryFor(context);
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected
+            ? (AppColors.isDark(context)
+                  ? color.withValues(alpha: 0.85)
+                  : color)
+            : AppColors.surfaceFor(context),
+        shape: StadiumBorder(
+          side: BorderSide(
+            color: selected ? Colors.transparent : AppColors.borderFor(context),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: dense ? 14 : 16,
+              vertical: dense ? 8 : 11,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 18, color: selected ? Colors.white : color),
+                  const SizedBox(width: 6),
+                ],
+                Text(
+                  label,
+                  style:
+                      (dense
+                              ? Theme.of(context).textTheme.labelMedium
+                              : Theme.of(context).textTheme.labelLarge)
+                          ?.copyWith(
+                            color: foreground,
+                            fontWeight: FontWeight.w700,
+                          ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionBlock extends StatelessWidget {
+  const _SectionBlock({required this.section});
+
+  final _Section section;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final priced = section.items.where((item) => item.hasRecordedPrice);
+    // A range across different units (per kg vs 25 kg bag) would mislead.
+    final sameUnit = priced.map((item) => item.unit).toSet().length == 1;
+    final prices = sameUnit
+        ? priced.map((item) => item.latestAveragePrice).toList()
+        : <double>[];
+    final count = section.items.length;
+    final low = prices.isEmpty ? null : prices.reduce((a, b) => a < b ? a : b);
+    final high = prices.isEmpty ? null : prices.reduce((a, b) => a > b ? a : b);
+    final meta = [
+      count == 1 ? '1 item' : '$count items',
+      if (low != null && high != null && high - low > 0.005)
+        '${AppFormatters.currency(low)} – ${AppFormatters.currency(high)}',
+    ].join(' · ');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: Row(
+            children: [
+              CategoryIconBadge(iconKey: section.iconKey, size: 34),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      section.title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      meta,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondaryFor(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 1000
+                ? 3
+                : constraints.maxWidth >= 640
+                ? 2
+                : 1;
+            const gap = AppSpacing.sm;
+            final width =
+                (constraints.maxWidth - gap * (columns - 1)) / columns;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final item in section.items)
+                  SizedBox(
+                    width: width,
+                    child: _PriceTile(
+                      item: item,
+                      showSubcategory: section.showSubcategory,
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _PriceTile extends StatelessWidget {
+  const _PriceTile({required this.item, required this.showSubcategory});
+
+  final CommodityOverview item;
+  final bool showSubcategory;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final subtitle = [
+      if (showSubcategory && item.subcategoryName != null)
+        item.subcategoryName!,
+      'per ${item.unit}',
+    ].join(' · ');
+    return Material(
+      color: AppColors.surfaceFor(context),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: AppColors.borderFor(context)),
+      ),
+      child: InkWell(
+        onTap: () => context.push('/commodity/${item.id}'),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              CommodityVisual(
+                label: item.name,
+                category: item.categoryName,
+                size: 46,
+                heroTag: 'commodity-visual-${item.id}',
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            item.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        if (item.isWatched) ...[
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.bookmark_rounded,
+                            size: 16,
+                            color: AppColors.accentFor(context),
+                            semanticLabel: 'On your watchlist',
+                          ),
+                        ],
+                      ],
+                    ),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondaryFor(context),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    PriceFreshnessChip(
+                      recordedAt: item.latestUpdatedAt,
+                      storeCount: item.storeCount,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    item.hasRecordedPrice
+                        ? AppFormatters.currency(item.latestAveragePrice)
+                        : '—',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  _SrpStatus(item: item),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Above SRP +₱10" / "At SRP" / "Below SRP" / "SRP ₱90" for unpriced items.
+class _SrpStatus extends StatelessWidget {
+  const _SrpStatus({required this.item});
 
   final CommodityOverview item;
 
   @override
   Widget build(BuildContext context) {
-    final percentage = (item.varianceFromSrp / item.srp) * 100;
-    final useDark = AppColors.isDark(context);
     final theme = Theme.of(context);
-    final trendColor = percentage >= 0
-        ? AppColors.warning
-        : (useDark ? AppColors.darkPrimarySoft : AppColors.primaryDark);
-    final summary = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Text(
-                item.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: AppColors.textPrimaryFor(context),
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            if (item.isWatched)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color:
-                      (useDark ? AppColors.darkPrimarySoft : AppColors.primary)
-                          .withValues(alpha: useDark ? 0.18 : 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Icon(
-                  Icons.bookmark_rounded,
-                  size: 14,
-                  color: useDark
-                      ? AppColors.darkPrimarySoft
-                      : AppColors.primaryDark,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(
-          '${item.categoryName} | ${item.unit}',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: AppColors.textSecondaryFor(context),
-          ),
-        ),
-        const SizedBox(height: 10),
-        PriceTrendBadge(
-          delta: item.varianceFromSrp,
-          label: percentage >= 0
-              ? '${percentage.toStringAsFixed(1)}% above SRP'
-              : '${percentage.abs().toStringAsFixed(1)}% below SRP',
-        ),
-      ],
-    );
-
-    final priceMeta = Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          AppFormatters.currency(item.latestAveragePrice),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: AppColors.textPrimaryFor(context),
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              percentage >= 0
-                  ? Icons.trending_up_rounded
-                  : Icons.trending_down_rounded,
-              size: 16,
-              color: trendColor,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '${percentage.abs().toStringAsFixed(1)}%',
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: trendColor,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'SRP ${AppFormatters.currency(item.srp)}',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: AppColors.textSecondaryFor(context),
-          ),
-        ),
-      ],
-    );
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => context.push('/commodity/${item.id}'),
-        child: Ink(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceFor(context),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: AppColors.borderFor(
-                context,
-              ).withValues(alpha: useDark ? 0.72 : 1),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadowFor(context).withValues(alpha: 0.10),
-                blurRadius: 14,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxWidth < 640;
-
-              if (compact) {
-                return ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 154),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CommodityVisual(
-                            label: item.name,
-                            category: item.categoryName,
-                            size: 72,
-                            heroTag: 'commodity-visual-${item.id}',
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(child: summary),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Align(alignment: Alignment.centerLeft, child: priceMeta),
-                    ],
-                  ),
-                );
-              }
-
-              return ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 132),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CommodityVisual(
-                      label: item.name,
-                      category: item.categoryName,
-                      size: 72,
-                      heroTag: 'commodity-visual-${item.id}',
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(child: summary),
-                    const SizedBox(width: 16),
-                    Flexible(child: priceMeta),
-                  ],
-                ),
-              );
-            },
-          ),
+    final delta = item.varianceFromSrp;
+    final (label, color) = !item.hasRecordedPrice
+        ? (
+            'SRP ${AppFormatters.currency(item.srp)}',
+            AppColors.textSecondaryFor(context),
+          )
+        : delta > 0.005
+        ? (
+            'Above SRP +${AppFormatters.currency(delta)}',
+            AppColors.readableFor(context, AppColors.warningText),
+          )
+        : delta < -0.005
+        ? ('Below SRP', AppColors.readableFor(context, AppColors.success))
+        : ('At SRP', AppColors.textSecondaryFor(context));
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

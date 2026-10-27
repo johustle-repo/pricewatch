@@ -1,7 +1,9 @@
 import '../../../core/database/cloud_data_service.dart';
+import '../../../core/utils/market_prices.dart';
 import '../../../shared/models/category_model.dart';
 import '../../../shared/models/commodity_model.dart';
 import '../../../shared/models/price_entry_model.dart';
+import '../../../shared/models/store_model.dart';
 import '../../../shared/models/ui_models.dart';
 import '../../../shared/models/watchlist_model.dart';
 
@@ -38,43 +40,53 @@ class HomeRepository {
       field: 'user_id',
       value: userId,
     );
-    final stores = await _cloudDataService.getCollection('stores');
+    final stores = (await _cloudDataService.getCollection(
+      'stores',
+    )).map(StoreModel.fromMap).where((item) => !item.isArchived).toList();
+    final activeStoreIds = stores.map((item) => item.id).nonNulls.toSet();
+    final activeEntries = priceEntries
+        .where((entry) => activeStoreIds.contains(entry.storeId))
+        .toList();
 
     final userWatchlists = watchlists
         .where((item) => item.userId == userId)
         .toList();
     final watchedIds = userWatchlists.map((item) => item.commodityId).toSet();
 
-    final featuredCommodities = [...commodities]
-      ..sort((a, b) => b.srp.compareTo(a.srp));
-    final featuredProducts = featuredCommodities
-        .where((item) => item.id != null)
-        .take(6)
-        .map((commodity) {
-          final commodityId = commodity.id;
-          if (commodityId == null) {
-            return null;
-          }
-          final category = categories
-              .where((item) => item.id == commodity.categoryId)
-              .firstOrNull;
-          final latest = _latestAverageForCommodity(priceEntries, commodityId);
-          return CommodityOverview(
-            id: commodityId,
-            categoryId: commodity.categoryId,
-            categoryName: category?.name ?? 'Uncategorized',
-            name: commodity.name,
-            unit: commodity.unit,
-            srp: commodity.srp,
-            latestAveragePrice: latest.$1 == 0 ? commodity.srp : latest.$1,
-            latestUpdatedAt: latest.$2,
-            isWatched: watchedIds.contains(commodityId),
-          );
-        })
-        .nonNulls
-        .toList();
+    final entriesByCommodity = <int, List<PriceEntryModel>>{};
+    for (final entry in activeEntries) {
+      entriesByCommodity.putIfAbsent(entry.commodityId, () => []).add(entry);
+    }
+    final overviews = commodities.where((item) => item.id != null).map((
+      commodity,
+    ) {
+      final category = categories
+          .where((item) => item.id == commodity.categoryId)
+          .firstOrNull;
+      final market = currentMarketPrice(
+        entriesByCommodity[commodity.id] ?? const [],
+      );
+      return CommodityOverview(
+        id: commodity.id!,
+        categoryId: commodity.categoryId,
+        categoryName: category?.name ?? 'Uncategorized',
+        name: commodity.name,
+        unit: commodity.unit,
+        srp: commodity.srp,
+        latestAveragePrice: market.average ?? commodity.srp,
+        latestUpdatedAt: market.latestRecordedAt ?? '',
+        storeCount: market.storeCount,
+        isWatched: watchedIds.contains(commodity.id),
+      );
+    }).toList();
+    // Feature the most recently priced commodities; unpriced ones come last.
+    overviews.sort((a, b) {
+      final byDate = b.latestUpdatedAt.compareTo(a.latestUpdatedAt);
+      return byDate != 0 ? byDate : b.srp.compareTo(a.srp);
+    });
+    final featuredProducts = overviews.take(6).toList();
 
-    final updates = [...priceEntries]
+    final updates = [...activeEntries]
       ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
     final latestUpdates = updates
         .map((entry) {
@@ -82,14 +94,15 @@ class HomeRepository {
               .where((item) => item.id == entry.commodityId)
               .firstOrNull;
           final store = stores
-              .where((item) => item['id'] == entry.storeId)
+              .where((item) => item.id == entry.storeId)
               .firstOrNull;
           if (commodity == null || store == null) {
             return null;
           }
           return PriceUpdateItem(
+            commodityId: commodity.id,
             commodityName: commodity.name,
-            storeName: store['name'] as String? ?? 'Unknown store',
+            storeName: store.name,
             price: entry.price,
             recordedAt: entry.recordedAt,
           );
@@ -108,34 +121,13 @@ class HomeRepository {
       watchlistCount: userWatchlists.length,
       reportsCount: reports.where((item) => item['user_id'] == userId).length,
       storeCount: stores.length,
+      commodityCounts: {
+        for (final category in categories)
+          if (category.id != null)
+            category.id!: commodities
+                .where((item) => item.categoryId == category.id)
+                .length,
+      },
     );
-  }
-
-  (double, String) _latestAverageForCommodity(
-    List<PriceEntryModel> entries,
-    int commodityId,
-  ) {
-    final commodityEntries = entries
-        .where((item) => item.commodityId == commodityId)
-        .toList();
-    if (commodityEntries.isEmpty) {
-      return (0.0, '');
-    }
-
-    final latestByStore = <int, PriceEntryModel>{};
-    for (final entry
-        in commodityEntries
-          ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt))) {
-      latestByStore.putIfAbsent(entry.storeId, () => entry);
-    }
-
-    final latestEntries = latestByStore.values.toList();
-    final average =
-        latestEntries.map((item) => item.price).reduce((a, b) => a + b) /
-        latestEntries.length;
-    final latestRecordedAt = latestEntries
-        .map((item) => item.recordedAt)
-        .reduce((a, b) => a.compareTo(b) > 0 ? a : b);
-    return (average, latestRecordedAt);
   }
 }

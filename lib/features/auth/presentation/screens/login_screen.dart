@@ -204,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   'ACCOUNT ACCESS',
                   style: theme.textTheme.labelMedium?.copyWith(
-                    color: AppColors.primary,
+                    color: AppColors.accentFor(context),
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.1,
                   ),

@@ -458,7 +458,7 @@ class StoreQrA4Poster extends StatelessWidget {
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) => Icon(
                             Icons.location_city_rounded,
-                            color: AppColors.primaryDark,
+                            color: AppColors.accentFor(context),
                             size: px(30),
                           ),
                         ),

@@ -20,6 +20,7 @@ class AppStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = AppColors.readableFor(context, this.color);
     final foreground = _accessibleForeground(context, color);
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),

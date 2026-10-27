@@ -457,9 +457,9 @@ class _MobileProducts extends StatelessWidget {
                     color: AppColors.primary.withValues(alpha: .11),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.inventory_2_outlined,
-                    color: AppColors.primary,
+                    color: AppColors.accentFor(context),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -534,7 +534,7 @@ class _MobileTool extends StatelessWidget {
       border: Border.all(color: AppColors.borderFor(context)),
     ),
     child: ListTile(
-      leading: Icon(icon, color: AppColors.primary),
+      leading: Icon(icon, color: AppColors.accentFor(context)),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
       subtitle: Text(subtitle),
       trailing: const Icon(Icons.chevron_right_rounded),
@@ -884,7 +884,7 @@ class _Action extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListTile(
     contentPadding: EdgeInsets.zero,
-    leading: Icon(icon, color: AppColors.primary),
+    leading: Icon(icon, color: AppColors.accentFor(context)),
     title: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
     trailing: const Icon(Icons.arrow_forward_rounded, size: 18),
     onTap: onTap,

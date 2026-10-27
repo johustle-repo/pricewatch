@@ -35,6 +35,8 @@ import '../../../../shared/widgets/stat_card.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import 'vendor_dashboard_screen.dart';
 import 'vendor_store_qr_screen.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class VendorWorkspaceScreen extends StatefulWidget {
   const VendorWorkspaceScreen({
@@ -72,6 +74,8 @@ class _VendorWorkspaceScreenState extends State<VendorWorkspaceScreen> {
               leading: const AppShellMenuButton(),
               title: const Text('Vendor Workspace'),
               actions: [
+                const PriceWatchGuideButton(),
+                const ThemeModeButton(),
                 IconButton(
                   tooltip: 'Public view',
                   onPressed: () => context.go('/'),
@@ -212,6 +216,7 @@ class _VendorWorkspaceScreenState extends State<VendorWorkspaceScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<int>(
+                  isExpanded: true,
                   initialValue: selectedCommodityId,
                   disabledHint: existing == null
                       ? null
@@ -544,6 +549,9 @@ class _VendorWebWorkspace extends StatelessWidget {
           action: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const PriceWatchGuideButton(),
+              const ThemeModeButton(),
+              const SizedBox(width: AppSpacing.xs),
               IconButton.outlined(
                 tooltip: 'Refresh workspace',
                 onPressed: onRefresh,
@@ -745,7 +753,7 @@ class _VendorNewStat extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: AppColors.primary),
+        Icon(icon, color: AppColors.accentFor(context)),
         const SizedBox(height: AppSpacing.sm),
         Text(
           value,
@@ -1355,6 +1363,7 @@ class _VendorProductsTableState extends State<_VendorProductsTable> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
+                            isExpanded: true,
                             initialValue: _status,
                             decoration: const InputDecoration(
                               labelText: 'SRP status',
@@ -1380,6 +1389,7 @@ class _VendorProductsTableState extends State<_VendorProductsTable> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: DropdownButtonFormField<String>(
+                            isExpanded: true,
                             initialValue: _sort,
                             decoration: const InputDecoration(
                               labelText: 'Sort',
@@ -1893,7 +1903,11 @@ class _VendorToolsSection extends StatelessWidget {
                 for (final tool in tools)
                   SizedBox(
                     width: cardWidth,
-                    child: _VendorToolCard(tool: tool),
+                    // Equal heights only matter when cards share a row.
+                    child: _VendorToolCard(
+                      tool: tool,
+                      minHeight: columns > 1 ? 132 : 0,
+                    ),
                   ),
               ],
             );
@@ -1905,9 +1919,10 @@ class _VendorToolsSection extends StatelessWidget {
 }
 
 class _VendorToolCard extends StatelessWidget {
-  const _VendorToolCard({required this.tool});
+  const _VendorToolCard({required this.tool, this.minHeight = 132});
 
   final _VendorTool tool;
+  final double minHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -1915,7 +1930,7 @@ class _VendorToolCard extends StatelessWidget {
     final disabled = tool.onTap == null;
     final color = useDark && tool.color == AppColors.sky
         ? AppColors.darkPrimarySoft
-        : tool.color;
+        : AppColors.readableFor(context, tool.color);
 
     return Material(
       color: Colors.transparent,
@@ -1923,7 +1938,7 @@ class _VendorToolCard extends StatelessWidget {
         onTap: tool.onTap,
         borderRadius: BorderRadius.circular(18),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 132),
+          constraints: BoxConstraints(minHeight: minHeight),
           child: Ink(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
@@ -2377,21 +2392,14 @@ class _VendorStoreQrExportCard extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(4),
                     child: Image.asset(
-                      'assets/icons/lingayen_project_logo.png',
+                      'assets/icons/app_logo.png',
                       fit: BoxFit.contain,
                       filterQuality: FilterQuality.high,
                       errorBuilder: (context, error, stackTrace) {
-                        return Image.asset(
-                          'assets/images/branding/lingayen_seal.png',
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.location_city_rounded,
-                              color: AppColors.primaryDark,
-                              size: 24,
-                            );
-                          },
+                        return Icon(
+                          Icons.visibility_rounded,
+                          color: AppColors.accentFor(context),
+                          size: 24,
                         );
                       },
                     ),
@@ -2406,7 +2414,7 @@ class _VendorStoreQrExportCard extends StatelessWidget {
                     Text(
                       'PriceWatch Store QR',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColors.primaryDark,
+                        color: AppColors.accentFor(context),
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -2515,7 +2523,7 @@ class _VendorTableNameCell extends StatelessWidget {
               color: AppColors.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppColors.primaryDark, size: 19),
+            child: Icon(icon, color: AppColors.accentFor(context), size: 19),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -3097,9 +3105,9 @@ class _VendorProductsCard extends StatelessWidget {
                       backgroundColor: AppColors.primary.withValues(
                         alpha: 0.12,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.shopping_basket_rounded,
-                        color: AppColors.primary,
+                        color: AppColors.accentFor(context),
                       ),
                     ),
                     title: Text(price.commodityName),
@@ -3268,7 +3276,7 @@ class _CardHeader extends StatelessWidget {
             color: AppColors.primary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(16),
           ),
-          child: Icon(icon, color: AppColors.primary),
+          child: Icon(icon, color: AppColors.accentFor(context)),
         ),
         const SizedBox(width: 12),
         Expanded(

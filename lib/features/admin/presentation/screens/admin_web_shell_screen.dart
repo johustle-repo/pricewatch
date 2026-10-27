@@ -6,6 +6,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../shared/widgets/app_seal_badge.dart';
 import '../widgets/admin_page_frame.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class AdminWebShellScreen extends StatelessWidget {
   const AdminWebShellScreen({
@@ -423,6 +425,9 @@ class _AdminTopBar extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.md),
           ],
+          const PriceWatchGuideButton(),
+          const ThemeModeButton(),
+          const SizedBox(width: AppSpacing.xs),
           IconButton(
             tooltip: 'Public view',
             onPressed: () => context.go('/'),
@@ -479,6 +484,7 @@ class _TopBarChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = AppColors.readableFor(context, this.color);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(

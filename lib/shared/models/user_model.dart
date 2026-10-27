@@ -1,3 +1,5 @@
+import '../../core/utils/app_formatters.dart';
+
 class UserModel {
   const UserModel({
     this.id,
@@ -25,7 +27,7 @@ class UserModel {
   factory UserModel.fromMap(Map<String, Object?> map) {
     return UserModel(
       id: map['id'] as int?,
-      fullName: map['full_name'] as String,
+      fullName: AppFormatters.personName(map['full_name'] as String),
       email: map['email'] as String,
       passwordHash: map['password_hash'] as String? ?? '',
       authUid: map['auth_uid'] as String?,

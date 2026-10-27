@@ -1,3 +1,5 @@
+import '../../../core/utils/market_prices.dart';
+
 class MarketDisplayData {
   const MarketDisplayData({
     required this.storeId,
@@ -19,15 +21,17 @@ class MarketDisplayData {
 
   int get itemCount => items.length;
 
-  int get aboveSrpCount =>
-      items.where((item) => item.currentPrice > item.srp).length;
+  /// Items with at least one recorded market price.
+  List<MarketDisplayPriceItem> get pricedItems =>
+      items.where((item) => item.hasRecordedPrice).toList();
 
-  int get belowSrpCount =>
-      items.where((item) => item.currentPrice < item.srp).length;
+  int get aboveSrpCount => pricedItems.where((item) => item.isAboveSrp).length;
+
+  int get belowSrpCount => pricedItems.where((item) => item.isBelowSrp).length;
 
   int get updatedTodayCount {
     final now = DateTime.now();
-    return items.where((item) {
+    return pricedItems.where((item) {
       final updated = DateTime.parse(item.recordedAt).toLocal();
       return updated.year == now.year &&
           updated.month == now.month &&
@@ -36,16 +40,20 @@ class MarketDisplayData {
   }
 
   double get averagePrice {
-    if (items.isEmpty) {
+    final priced = pricedItems;
+    if (priced.isEmpty) {
       return 0;
     }
 
-    final total = items.fold<double>(0, (sum, item) => sum + item.currentPrice);
-    return total / items.length;
+    final total = priced.fold<double>(
+      0,
+      (sum, item) => sum + item.currentPrice,
+    );
+    return total / priced.length;
   }
 
   List<MarketDisplayPriceItem> get spotlightItems {
-    final sorted = [...items]
+    final sorted = [...pricedItems]
       ..sort(
         (left, right) => right.absoluteVarianceFromSrp.compareTo(
           left.absoluteVarianceFromSrp,
@@ -65,7 +73,12 @@ class MarketDisplayPriceItem {
     required this.currentPrice,
     required this.previousPrice,
     required this.recordedAt,
-  });
+    this.hasRecordedPrice = true,
+    this.storeCount = 1,
+    double? lowestPrice,
+    double? highestPrice,
+  }) : lowestPrice = lowestPrice ?? currentPrice,
+       highestPrice = highestPrice ?? currentPrice;
 
   final int commodityId;
   final String commodityName;
@@ -75,6 +88,30 @@ class MarketDisplayPriceItem {
   final double currentPrice;
   final double previousPrice;
   final String recordedAt;
+
+  /// False when no stall has recorded a price; the SRP is shown for reference.
+  final bool hasRecordedPrice;
+
+  /// Number of stalls whose latest price is in [currentPrice].
+  final int storeCount;
+  final double lowestPrice;
+  final double highestPrice;
+
+  bool get hasPriceRange => highestPrice - lowestPrice > 0.009;
+
+  /// Newest price is older than [stalePriceAge].
+  bool get isStale => hasRecordedPrice && isStalePrice(recordedAt);
+
+  String get statusLabel => !hasRecordedPrice
+      ? 'No price yet'
+      : isAboveSrp
+      ? 'Above SRP'
+      : isBelowSrp
+      ? 'Below SRP'
+      : 'At SRP';
+
+  String get storeCountLabel =>
+      storeCount == 1 ? '1 stall' : '$storeCount stalls';
 
   double get deltaFromPrevious => currentPrice - previousPrice;
 

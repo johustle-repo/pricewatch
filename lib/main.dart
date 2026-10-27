@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 
 import 'app.dart';
 import 'core/di/app_dependencies.dart';
+import 'core/theme/theme_controller.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/controllers/auth_controller.dart';
 import 'firebase_options.dart';
@@ -19,8 +20,14 @@ Future<void> main() async {
       authRepository: dependencies.authRepository,
     )..initialize();
 
+    final themeController = await ThemeController.load();
+
     runApp(
-      PriceWatchApp(dependencies: dependencies, authController: authController),
+      PriceWatchApp(
+        dependencies: dependencies,
+        authController: authController,
+        themeController: themeController,
+      ),
     );
   } catch (error, stackTrace) {
     FlutterError.reportError(

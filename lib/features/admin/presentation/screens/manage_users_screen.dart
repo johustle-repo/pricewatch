@@ -235,6 +235,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     var selectedRole = user?.role ?? role;
     var selectedStoreId = user?.storeId;
     var obscurePassword = true;
+    var sendingReset = false;
     final stores = context.read<AdminController>().stores;
 
     await showDialog<void>(
@@ -272,6 +273,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
+                          isExpanded: true,
                           initialValue: selectedRole,
                           decoration: const InputDecoration(labelText: 'Role'),
                           items: const [
@@ -308,6 +310,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                         if (isVendor) ...[
                           const SizedBox(height: 12),
                           DropdownButtonFormField<int>(
+                            isExpanded: true,
                             initialValue: selectedStoreId,
                             decoration: const InputDecoration(
                               labelText: 'Verified shop assignment',
@@ -342,39 +345,72 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                           ),
                         ],
                         const SizedBox(height: 12),
-                        TextFormField(
-                          controller: passwordController,
-                          obscureText: obscurePassword,
-                          decoration: InputDecoration(
-                            labelText: user == null
-                                ? 'Password'
-                                : 'New password (optional)',
-                            suffixIcon: IconButton(
-                              tooltip: obscurePassword
-                                  ? 'Show password'
-                                  : 'Hide password',
-                              onPressed: () {
-                                setState(() {
-                                  obscurePassword = !obscurePassword;
-                                });
-                              },
-                              icon: Icon(
-                                obscurePassword
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
-                              ),
+                        if (user != null) ...[
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: OutlinedButton.icon(
+                              onPressed: sendingReset
+                                  ? null
+                                  : () async {
+                                      setState(() => sendingReset = true);
+                                      final admin = context
+                                          .read<AdminController>();
+                                      final messenger = ScaffoldMessenger.of(
+                                        context,
+                                      );
+                                      final sentTo = await admin
+                                          .sendPasswordResetEmail(user.id!);
+                                      if (context.mounted) {
+                                        setState(() => sendingReset = false);
+                                      }
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            sentTo != null
+                                                ? 'Password reset email sent to $sentTo.'
+                                                : admin.error ??
+                                                      'Could not send the password reset email.',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                              icon: const Icon(Icons.lock_reset_rounded),
+                              label: const Text('Send password reset email'),
                             ),
                           ),
-                          validator: (value) {
-                            if (user == null) {
-                              return Validators.password(value);
-                            }
-                            if ((value ?? '').trim().isEmpty) {
-                              return null;
-                            }
-                            return Validators.password(value);
-                          },
-                        ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'The user receives a link to choose a new password. Check the spam folder if it does not arrive.',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: AppColors.textSecondaryFor(context),
+                                  height: 1.35,
+                                ),
+                          ),
+                        ] else
+                          TextFormField(
+                            controller: passwordController,
+                            obscureText: obscurePassword,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              suffixIcon: IconButton(
+                                tooltip: obscurePassword
+                                    ? 'Show password'
+                                    : 'Hide password',
+                                onPressed: () {
+                                  setState(() {
+                                    obscurePassword = !obscurePassword;
+                                  });
+                                },
+                                icon: Icon(
+                                  obscurePassword
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                ),
+                              ),
+                            ),
+                            validator: Validators.password,
+                          ),
                       ],
                     ),
                   ),
@@ -398,9 +434,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                       storeId: selectedRole == 'vendor'
                           ? selectedStoreId
                           : null,
-                      password: passwordController.text.trim().isEmpty
-                          ? null
-                          : passwordController.text,
+                      password: user == null ? passwordController.text : null,
                     );
                     if (context.mounted && isEditingSelf) {
                       await context.read<AuthController>().refreshUser();
@@ -444,6 +478,7 @@ class _UserFilters extends StatelessWidget {
         ),
       );
       final filter = DropdownButtonFormField<String>(
+        isExpanded: true,
         initialValue: role,
         decoration: const InputDecoration(
           prefixIcon: Icon(Icons.manage_accounts_outlined),

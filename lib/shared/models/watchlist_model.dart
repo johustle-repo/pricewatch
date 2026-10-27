@@ -5,6 +5,7 @@ class WatchlistModel {
     required this.commodityId,
     required this.priceThreshold,
     required this.createdAt,
+    this.lastAlertedAt,
   });
 
   final int? id;
@@ -13,6 +14,9 @@ class WatchlistModel {
   final double? priceThreshold;
   final String createdAt;
 
+  /// Newest price already announced to the user for this watch.
+  final String? lastAlertedAt;
+
   factory WatchlistModel.fromMap(Map<String, Object?> map) {
     return WatchlistModel(
       id: map['id'] as int?,
@@ -20,6 +24,7 @@ class WatchlistModel {
       commodityId: map['commodity_id'] as int,
       priceThreshold: (map['price_threshold'] as num?)?.toDouble(),
       createdAt: map['created_at'] as String,
+      lastAlertedAt: map['last_alerted_at'] as String?,
     );
   }
 
@@ -30,6 +35,7 @@ class WatchlistModel {
       'commodity_id': commodityId,
       'price_threshold': priceThreshold,
       'created_at': createdAt,
+      'last_alerted_at': lastAlertedAt,
     };
   }
 }

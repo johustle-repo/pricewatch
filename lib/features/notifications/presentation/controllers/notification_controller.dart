@@ -1,14 +1,18 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../shared/models/app_notification_model.dart';
+import '../../../watchlist/data/watchlist_repository.dart';
 import '../../data/notification_repository.dart';
 
 class NotificationController extends ChangeNotifier {
   NotificationController({
     required NotificationRepository notificationRepository,
-  }) : _notificationRepository = notificationRepository;
+    WatchlistRepository? watchlistRepository,
+  }) : _notificationRepository = notificationRepository,
+       _watchlistRepository = watchlistRepository;
 
   final NotificationRepository _notificationRepository;
+  final WatchlistRepository? _watchlistRepository;
 
   List<AppNotificationModel> _notifications = [];
   bool _isLoading = false;
@@ -25,6 +29,11 @@ class NotificationController extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
+      try {
+        await _watchlistRepository?.syncWatchAlerts(userId);
+      } catch (_) {
+        // Alerts are best effort; existing notifications still load.
+      }
       _notifications = await _notificationRepository.getNotifications(userId);
       _unreadCount = await _notificationRepository.unreadCount(userId);
     } catch (error) {

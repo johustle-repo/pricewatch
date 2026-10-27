@@ -12,6 +12,9 @@ import '../../../../shared/widgets/app_surface_card.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/profile_controller.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../admin/presentation/widgets/admin_page_frame.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -36,7 +39,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final useWebShell = MediaQuery.sizeOf(context).width >= 1024;
+    final useWebShell =
+        MediaQuery.sizeOf(context).width >= adminWebLayoutBreakpoint;
     final controller = context.watch<ProfileController>();
 
     return Scaffold(
@@ -45,7 +49,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           : AppBar(
               leading: const AppShellMenuButton(),
               title: const Text('Change Password'),
-              actions: const [AppNotificationButton(), SizedBox(width: 8)],
+              actions: const [
+                PriceWatchGuideButton(),
+                ThemeModeButton(),
+                AppNotificationButton(),
+                SizedBox(width: 8),
+              ],
             ),
       body: AppBackground(
         child: SingleChildScrollView(

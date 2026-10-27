@@ -30,6 +30,11 @@ class AppShellMenuButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final shell = AppShellScope.maybeOf(context);
     final width = MediaQuery.sizeOf(context).width;
+    // Without a drawer (buyers use tabs), pages opened from a tab need a way
+    // back rather than a menu.
+    if (shell == null && (Navigator.maybeOf(context)?.canPop() ?? false)) {
+      return const BackButton();
+    }
     if (shell == null && width < 720 && showMobileBrand) {
       return const Center(
         child: AppSealBadge(size: 30, padding: 2.5, showFrame: false),

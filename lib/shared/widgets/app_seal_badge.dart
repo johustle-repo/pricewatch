@@ -46,28 +46,14 @@ class AppSealBadge extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.all(size * 0.06),
           child: Image.asset(
-            'assets/icons/lingayen_project_logo.png',
+            'assets/icons/app_logo.png',
             fit: BoxFit.contain,
             filterQuality: FilterQuality.high,
             errorBuilder: (context, error, stackTrace) {
-              return Image.asset(
-                'assets/images/branding/lingayen_seal.png',
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.high,
-                errorBuilder: (context, error, stackTrace) {
-                  return Image.asset(
-                    'assets/icons/lingayen_seal.jpg',
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.high,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(
-                        Icons.location_city_rounded,
-                        color: AppColors.primaryDark,
-                        size: size * 0.42,
-                      );
-                    },
-                  );
-                },
+              return Icon(
+                Icons.visibility_rounded,
+                color: AppColors.accentFor(context),
+                size: size * 0.42,
               );
             },
           ),

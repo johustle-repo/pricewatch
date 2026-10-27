@@ -6,6 +6,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/store_qr_codec.dart';
 import '../../../../shared/widgets/app_notification_button.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../admin/presentation/widgets/admin_page_frame.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class StoreQrScannerScreen extends StatefulWidget {
   const StoreQrScannerScreen({super.key, this.openReportOnScan = false});
@@ -49,13 +52,19 @@ class _StoreQrScannerScreenState extends State<StoreQrScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final useWebShell = MediaQuery.sizeOf(context).width >= 1024;
+    final useWebShell =
+        MediaQuery.sizeOf(context).width >= adminWebLayoutBreakpoint;
     return Scaffold(
       appBar: useWebShell
           ? null
           : AppBar(
               title: const Text('Scan Store QR'),
-              actions: const [AppNotificationButton(), SizedBox(width: 8)],
+              actions: const [
+                PriceWatchGuideButton(),
+                ThemeModeButton(),
+                AppNotificationButton(),
+                SizedBox(width: 8),
+              ],
             ),
       body: _scannerError != null
           ? _ScannerErrorView(
@@ -184,10 +193,10 @@ class _ScannerErrorView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.qr_code_scanner_rounded,
                 size: 42,
-                color: AppColors.primary,
+                color: AppColors.accentFor(context),
               ),
               const SizedBox(height: 14),
               Text(

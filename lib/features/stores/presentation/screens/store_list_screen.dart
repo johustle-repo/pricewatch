@@ -15,6 +15,9 @@ import '../../../../shared/widgets/empty_state_view.dart';
 import '../../../../shared/widgets/responsive_page.dart';
 import '../../../../shared/widgets/shimmer_skeleton.dart';
 import '../controllers/store_controller.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../admin/presentation/widgets/admin_page_frame.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class StoreListScreen extends StatefulWidget {
   const StoreListScreen({super.key});
@@ -43,7 +46,8 @@ class _StoreListScreenState extends State<StoreListScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<StoreController>();
-    final useWebShell = MediaQuery.sizeOf(context).width >= 1024;
+    final useWebShell =
+        MediaQuery.sizeOf(context).width >= adminWebLayoutBreakpoint;
 
     return Scaffold(
       appBar: useWebShell
@@ -51,7 +55,12 @@ class _StoreListScreenState extends State<StoreListScreen> {
           : AppBar(
               leading: const AppShellMenuButton(),
               title: const Text('Markets & Stores'),
-              actions: const [AppNotificationButton(), SizedBox(width: 8)],
+              actions: const [
+                PriceWatchGuideButton(),
+                ThemeModeButton(),
+                AppNotificationButton(),
+                SizedBox(width: 8),
+              ],
             ),
       body: AppBackground(
         child: ResponsivePage(
@@ -176,9 +185,9 @@ class _StoreListScreenState extends State<StoreListScreen> {
                                 color: AppColors.backgroundAltFor(context),
                                 borderRadius: BorderRadius.circular(22),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.storefront_rounded,
-                                color: AppColors.primaryDark,
+                                color: AppColors.accentFor(context),
                                 size: 28,
                               ),
                             );

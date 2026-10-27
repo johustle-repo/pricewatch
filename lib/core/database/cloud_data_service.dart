@@ -1,8 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'database_service.dart';
-
 class CloudDataService {
   CloudDataService({
     required FirebaseFirestore firestore,
@@ -14,145 +12,7 @@ class CloudDataService {
   final SharedPreferences _preferences;
 
   static const String _sessionUserIdKey = 'active_user_id';
-  static const String _seedMetaCollection = 'meta';
-  static const String _seedMetaDocument = 'app';
   static const String _deletionsCollection = 'deletions';
-  static const int _migrationVersion = 5;
-  static const String _localMigrationVersionKey = 'cloud_migration_version';
-  static const String _lingayenStoreName = 'Lingayen Public Market';
-  static const String _lingayenMarketName = 'Lingayen Market';
-  static const Set<String> _agriculturalCategoryNames = {
-    'rice',
-    'eggs',
-    'vegetables',
-    'fish',
-    'meat',
-  };
-
-  Future<void> migrateLocalToCloudIfNeeded(
-    DatabaseService databaseService,
-  ) async {
-    final migratedVersion = _preferences.getInt(_localMigrationVersionKey) ?? 0;
-    if (migratedVersion >= _migrationVersion) {
-      await removeNonAgriculturalCloudData();
-      await ensureFreshLingayenMarketDisplayData();
-      return;
-    }
-
-    final metaRef = _firestore
-        .collection(_seedMetaCollection)
-        .doc(_seedMetaDocument);
-    final cloudMeta = await metaRef.get();
-    final cloudSeedVersion = cloudMeta.data()?['seed_version'];
-    if (cloudSeedVersion is int && cloudSeedVersion >= _migrationVersion) {
-      await _preferences.setInt(_localMigrationVersionKey, _migrationVersion);
-      await removeNonAgriculturalCloudData();
-      await ensureFreshLingayenMarketDisplayData();
-      return;
-    }
-
-    final db = await databaseService.database;
-    final users = await db.query('users');
-    final sessions = await db.query('sessions');
-    final categories = await db.query('categories');
-    final commodities = await db.query('commodities');
-    final stores = await db.query('stores');
-    final priceEntries = await db.query('price_entries');
-    final watchlists = await db.query('watchlists');
-    final reports = await db.query('reports');
-    final notifications = await db.query('notifications');
-
-    final batch = _firestore.batch();
-    await _seedMissingDocuments(batch, 'users', users);
-    await _seedMissingDocuments(batch, 'sessions', sessions);
-    await _seedMissingDocuments(batch, 'categories', categories);
-    await _seedMissingDocuments(batch, 'commodities', commodities);
-    await _seedMissingDocuments(batch, 'stores', stores);
-    await _seedMissingDocuments(batch, 'price_entries', priceEntries);
-    await _seedMissingDocuments(batch, 'watchlists', watchlists);
-    await _seedMissingDocuments(batch, 'reports', reports);
-    await _seedMissingDocuments(batch, 'notifications', notifications);
-    batch.set(metaRef, {
-      'seeded_at': FieldValue.serverTimestamp(),
-      'seed_version': _migrationVersion,
-      'last_sync_at': FieldValue.serverTimestamp(),
-      'collections': [
-        'users',
-        'sessions',
-        'categories',
-        'commodities',
-        'stores',
-        'price_entries',
-        'watchlists',
-        'reports',
-        'notifications',
-      ],
-    }, SetOptions(merge: true));
-    await batch.commit();
-    await removeNonAgriculturalCloudData();
-    await ensureFreshLingayenMarketDisplayData();
-    await _preferences.setInt(_localMigrationVersionKey, _migrationVersion);
-  }
-
-  Future<void> removeNonAgriculturalCloudData() async {
-    final categories = await getCollection('categories');
-    final nonAgriculturalCategoryIds = categories
-        .where(
-          (row) => !_agriculturalCategoryNames.contains(
-            ((row['name'] as String?) ?? '').trim().toLowerCase(),
-          ),
-        )
-        .map((row) => row['id'])
-        .whereType<int>()
-        .toSet();
-    if (nonAgriculturalCategoryIds.isEmpty) {
-      return;
-    }
-
-    final commodities = await getCollection('commodities');
-    final nonAgriculturalCommodityIds = commodities
-        .where((row) => nonAgriculturalCategoryIds.contains(row['category_id']))
-        .map((row) => row['id'])
-        .whereType<int>()
-        .toSet();
-
-    final batch = _firestore.batch();
-    for (final id in nonAgriculturalCategoryIds) {
-      batch.delete(_firestore.collection('categories').doc('$id'));
-    }
-    for (final id in nonAgriculturalCommodityIds) {
-      batch.delete(_firestore.collection('commodities').doc('$id'));
-    }
-
-    if (nonAgriculturalCommodityIds.isNotEmpty) {
-      await _deleteRowsWhereCommodityId(
-        batch,
-        collection: 'price_entries',
-        commodityIds: nonAgriculturalCommodityIds,
-      );
-      await _deleteRowsWhereCommodityId(
-        batch,
-        collection: 'watchlists',
-        commodityIds: nonAgriculturalCommodityIds,
-      );
-      await _deleteRowsWhereCommodityId(
-        batch,
-        collection: 'reports',
-        commodityIds: nonAgriculturalCommodityIds,
-      );
-    }
-
-    batch.set(
-      _firestore.collection(_seedMetaCollection).doc(_seedMetaDocument),
-      {
-        'seed_version': _migrationVersion,
-        'agricultural_cleanup_at': FieldValue.serverTimestamp(),
-        'last_sync_at': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
-    await batch.commit();
-  }
 
   Future<List<Map<String, Object?>>> getCollection(String name) async {
     final snapshot = await _firestore.collection(name).get();
@@ -170,6 +30,45 @@ class CloudDataService {
               .map((doc) => _normalizeWithDocumentId(doc.data(), doc.id))
               .toList(),
         );
+  }
+
+  /// Firestore allows at most 30 values in a `whereIn` filter.
+  static const int maxWhereInValues = 30;
+
+  /// Streams documents whose [field] is one of [values]. Falls back to the
+  /// whole collection when there are more values than one query allows.
+  Stream<List<Map<String, Object?>>> watchCollectionWhereIn(
+    String name, {
+    required String field,
+    required List<Object> values,
+  }) {
+    if (values.isEmpty) return Stream.value(const []);
+    if (values.length > maxWhereInValues) return watchCollection(name);
+    return _firestore
+        .collection(name)
+        .where(field, whereIn: values)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => _normalizeWithDocumentId(doc.data(), doc.id))
+              .toList(),
+        );
+  }
+
+  Future<List<Map<String, Object?>>> getCollectionWhereIn(
+    String name, {
+    required String field,
+    required List<Object> values,
+  }) async {
+    if (values.isEmpty) return const [];
+    if (values.length > maxWhereInValues) return getCollection(name);
+    final snapshot = await _firestore
+        .collection(name)
+        .where(field, whereIn: values)
+        .get();
+    return snapshot.docs
+        .map((doc) => _normalizeWithDocumentId(doc.data(), doc.id))
+        .toList();
   }
 
   Future<Map<String, Object?>?> getDocument(String collection, int id) async {
@@ -330,113 +229,6 @@ class CloudDataService {
   }
 
   int generateId() => DateTime.now().microsecondsSinceEpoch;
-
-  Future<void> ensureFreshLingayenMarketDisplayData() async {
-    final stores = await getCollection('stores');
-    final lingayenStores = stores.where(_isLingayenStore).toList();
-    if (lingayenStores.isEmpty) {
-      return;
-    }
-
-    final storeIds = lingayenStores
-        .map((row) => row['id'])
-        .whereType<int>()
-        .toSet();
-    if (storeIds.isEmpty) {
-      return;
-    }
-
-    final commodities = await getCollection('commodities');
-    final priceEntries = await getCollection('price_entries');
-    final lingayenEntries = priceEntries
-        .where((row) => storeIds.contains(row['store_id']))
-        .toList();
-    if (lingayenEntries.isEmpty) {
-      return;
-    }
-
-    final latestByCommodity = <int, Map<String, Object?>>{};
-    DateTime? latestRecordedAt;
-    for (final row in lingayenEntries) {
-      final commodityId = row['commodity_id'];
-      final recordedAt = row['recorded_at'];
-      if (commodityId is! int || recordedAt is! String) {
-        continue;
-      }
-
-      final recordedDate = DateTime.tryParse(recordedAt);
-      if (recordedDate != null &&
-          (latestRecordedAt == null ||
-              recordedDate.isAfter(latestRecordedAt))) {
-        latestRecordedAt = recordedDate;
-      }
-
-      final current = latestByCommodity[commodityId];
-      final currentRecordedAt = current?['recorded_at'];
-      if (current == null ||
-          (currentRecordedAt is String &&
-              recordedAt.compareTo(currentRecordedAt) > 0)) {
-        latestByCommodity[commodityId] = row;
-      }
-    }
-
-    final now = DateTime.now().toUtc();
-    if (latestRecordedAt == null ||
-        now.difference(latestRecordedAt.toUtc()) < const Duration(days: 1)) {
-      return;
-    }
-
-    final preferredStoreId = _preferredLingayenStoreId(lingayenStores);
-    if (preferredStoreId == null) {
-      return;
-    }
-
-    final batch = _firestore.batch();
-    var wroteAny = false;
-    for (final commodity in commodities) {
-      final commodityId = commodity['id'];
-      if (commodityId is! int) {
-        continue;
-      }
-
-      final latest = latestByCommodity[commodityId];
-      final latestPrice = latest?['price'];
-      final fallbackSrp = commodity['srp'];
-      final price = latestPrice is num
-          ? latestPrice.toDouble()
-          : fallbackSrp is num
-          ? fallbackSrp.toDouble()
-          : null;
-      if (price == null) {
-        continue;
-      }
-
-      final id = generateId() + commodityId;
-      batch.set(_firestore.collection('price_entries').doc('$id'), {
-        'id': id,
-        'commodity_id': commodityId,
-        'store_id': preferredStoreId,
-        'price': price,
-        'recorded_at': now.toIso8601String(),
-        'source': 'lingayen-display-refresh',
-      });
-      wroteAny = true;
-    }
-
-    if (!wroteAny) {
-      return;
-    }
-
-    batch.set(
-      _firestore.collection(_seedMetaCollection).doc(_seedMetaDocument),
-      {
-        'lingayen_refreshed_at': FieldValue.serverTimestamp(),
-        'last_sync_at': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
-    await batch.commit();
-  }
 
   Future<int?> getActiveUserId() async {
     return _preferences.getInt(_sessionUserIdKey);
@@ -658,66 +450,6 @@ class CloudDataService {
       'description': description,
       'created_at': DateTime.now().toUtc().toIso8601String(),
     });
-  }
-
-  Future<void> _seedMissingDocuments(
-    WriteBatch batch,
-    String collection,
-    List<Map<String, Object?>> rows,
-  ) async {
-    final existingSnapshot = await _firestore.collection(collection).get();
-    final existingIds = existingSnapshot.docs.map((doc) => doc.id).toSet();
-    final deletionSnapshot = await _firestore
-        .collection(_deletionsCollection)
-        .where('collection', isEqualTo: collection)
-        .get();
-    final deletedIds = deletionSnapshot.docs
-        .map((doc) => doc.data()['record_id'])
-        .whereType<int>()
-        .toSet();
-    for (final row in rows) {
-      final id = row['id'];
-      if (id is! int) {
-        continue;
-      }
-      if (deletedIds.contains(id)) continue;
-      final documentId = '$id';
-      if (existingIds.contains(documentId)) {
-        continue;
-      }
-      batch.set(_firestore.collection(collection).doc(documentId), row);
-    }
-  }
-
-  Future<void> _deleteRowsWhereCommodityId(
-    WriteBatch batch, {
-    required String collection,
-    required Set<int> commodityIds,
-  }) async {
-    final snapshot = await _firestore.collection(collection).get();
-    for (final doc in snapshot.docs) {
-      final commodityId = doc.data()['commodity_id'];
-      if (commodityId is int && commodityIds.contains(commodityId)) {
-        batch.delete(doc.reference);
-      }
-    }
-  }
-
-  bool _isLingayenStore(Map<String, Object?> row) {
-    return (row['name'] as String?)?.toLowerCase() ==
-            _lingayenStoreName.toLowerCase() ||
-        (row['market_name'] as String?)?.toLowerCase() ==
-            _lingayenMarketName.toLowerCase();
-  }
-
-  int? _preferredLingayenStoreId(List<Map<String, Object?>> stores) {
-    for (final store in stores) {
-      if ((store['name'] as String?)?.toLowerCase() ==
-          _lingayenStoreName.toLowerCase()) {
-        return store['id'] as int?;
-      }
-    }
-    return stores.first['id'] as int?;
   }
 
   Map<String, Object?> _normalize(Map<String, dynamic> data) {

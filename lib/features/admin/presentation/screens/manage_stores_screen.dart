@@ -3,7 +3,6 @@ import 'dart:ui' as ui;
 
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
-import '../../../../shared/widgets/pricewatch_help.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -100,8 +99,6 @@ class _ManageStoresScreenState extends State<ManageStoresScreen> {
                     AppSpacing.xxxl,
                   ),
                   children: [
-                    const PriceWatchHelp(),
-
                     AdminPageHeader(
                       title: 'Stores',
                       subtitle:
@@ -855,9 +852,9 @@ class _StoresTable extends StatelessWidget {
                         color: AppColors.backgroundAltFor(context),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.storefront_rounded,
-                        color: AppColors.primaryDark,
+                        color: AppColors.accentFor(context),
                         size: 20,
                       ),
                     ),
@@ -1030,21 +1027,14 @@ class _StoreQrExportCard extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(4),
                     child: Image.asset(
-                      'assets/icons/lingayen_project_logo.png',
+                      'assets/icons/app_logo.png',
                       fit: BoxFit.contain,
                       filterQuality: FilterQuality.high,
                       errorBuilder: (context, error, stackTrace) {
-                        return Image.asset(
-                          'assets/images/branding/lingayen_seal.png',
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.location_city_rounded,
-                              color: AppColors.primaryDark,
-                              size: 24,
-                            );
-                          },
+                        return Icon(
+                          Icons.visibility_rounded,
+                          color: AppColors.accentFor(context),
+                          size: 24,
                         );
                       },
                     ),
@@ -1059,7 +1049,7 @@ class _StoreQrExportCard extends StatelessWidget {
                     Text(
                       'PriceWatch Store QR',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColors.primaryDark,
+                        color: AppColors.accentFor(context),
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -1125,10 +1115,10 @@ class _StoreQrExportCard extends StatelessWidget {
           const SizedBox(height: 5),
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.person_outline_rounded,
                 size: 15,
-                color: AppColors.primary,
+                color: AppColors.accentFor(context),
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -1238,7 +1228,7 @@ class _QrDetailRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 16, color: AppColors.primary),
+        Icon(icon, size: 16, color: AppColors.accentFor(context)),
         const SizedBox(width: 9),
         Expanded(
           child: Column(
@@ -1298,9 +1288,9 @@ class _StoreRow extends StatelessWidget {
             color: AppColors.backgroundAlt,
             borderRadius: BorderRadius.circular(16),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.storefront_rounded,
-            color: AppColors.primaryDark,
+            color: AppColors.accentFor(context),
           ),
         ),
         const SizedBox(width: AppSpacing.md),

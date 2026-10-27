@@ -173,13 +173,31 @@ class AdminHeaderMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The page header is dark navy in the web layout and in dark mode, and a
+    // light card otherwise, so the metric follows whichever it sits on.
+    final onDark = useAdminWebLayout(context) || AppColors.isDark(context);
+    final valueColor = onDark
+        ? Colors.white
+        : AppColors.textPrimaryFor(context);
+    final labelColor = onDark
+        ? const Color(0xFFB9C5D8)
+        : AppColors.textSecondaryFor(context);
+    final iconColor = onDark
+        ? const Color(0xFFFF8BA7)
+        : AppColors.readableFor(context, accent);
     return Container(
       constraints: const BoxConstraints(minWidth: 148, maxWidth: 178),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: onDark
+            ? Colors.white.withValues(alpha: 0.08)
+            : AppColors.surfaceMutedFor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.13)),
+        border: Border.all(
+          color: onDark
+              ? Colors.white.withValues(alpha: 0.13)
+              : AppColors.borderFor(context),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -188,10 +206,12 @@ class AdminHeaderMetric extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.10),
+              color: onDark
+                  ? Colors.white.withValues(alpha: 0.10)
+                  : iconColor.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icon, color: const Color(0xFFFF8BA7), size: 20),
+            child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(width: AppSpacing.sm),
           Flexible(
@@ -205,7 +225,7 @@ class AdminHeaderMetric extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: valueColor,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -213,9 +233,9 @@ class AdminHeaderMetric extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFFB9C5D8),
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: labelColor),
                 ),
               ],
             ),

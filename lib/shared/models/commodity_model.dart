@@ -2,6 +2,7 @@ class CommodityModel {
   const CommodityModel({
     this.id,
     required this.categoryId,
+    this.subcategoryId,
     required this.name,
     required this.description,
     required this.unit,
@@ -11,6 +12,7 @@ class CommodityModel {
 
   final int? id;
   final int categoryId;
+  final int? subcategoryId;
   final String? description;
   final String name;
   final String unit;
@@ -21,6 +23,7 @@ class CommodityModel {
     return CommodityModel(
       id: map['id'] as int?,
       categoryId: map['category_id'] as int,
+      subcategoryId: map['subcategory_id'] as int?,
       name: map['name'] as String,
       description: map['description'] as String?,
       unit: map['unit'] as String,
@@ -33,6 +36,7 @@ class CommodityModel {
     return {
       'id': id,
       'category_id': categoryId,
+      'subcategory_id': subcategoryId,
       'name': name,
       'description': description,
       'unit': unit,

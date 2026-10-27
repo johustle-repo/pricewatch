@@ -1,4 +1,5 @@
 import '../../../core/database/cloud_data_service.dart';
+import '../../../core/utils/market_prices.dart';
 import '../../../shared/models/category_model.dart';
 import '../../../shared/models/commodity_model.dart';
 import '../../../shared/models/price_entry_model.dart';
@@ -23,170 +24,116 @@ class MarketDisplayRepository {
   }
 
   Future<MarketDisplayData> getLingayenMarketDisplayData() async {
-    final stores = (await _cloudDataService.getCollection(
-      'stores',
-    )).map(StoreModel.fromMap).where((item) => !item.isArchived).toList();
-    final storeMatches = _lingayenStores(stores);
-    final storeIds = storeMatches.map((item) => item.id).nonNulls.toSet();
-
-    final commodities = (await _cloudDataService.getCollection(
-      'commodities',
-    )).map(CommodityModel.fromMap).toList();
-    final categories = (await _cloudDataService.getCollection(
-      'categories',
-    )).map(CategoryModel.fromMap).toList();
-    final entries = (await _cloudDataService.getCollection('price_entries'))
-        .map(PriceEntryModel.fromMap)
-        .where((item) => storeIds.contains(item.storeId))
-        .toList();
-    final store = storeMatches.isEmpty
-        ? _fallbackLingayenMarket()
-        : _displayStoreForEntries(storeMatches, entries);
-    final storeId = store.id ?? 0;
-
-    return _buildDisplayData(
-      store: store,
-      storeId: storeId,
-      commodities: commodities,
-      categories: categories,
-      entries: entries,
-    );
+    final source = await _loadBoardSource();
+    final entries =
+        (await _cloudDataService.getCollectionWhereIn(
+              'price_entries',
+              field: 'store_id',
+              values: source.storeIds,
+            ))
+            .map(PriceEntryModel.fromMap)
+            .where((item) => source.storeIds.contains(item.storeId))
+            .toList();
+    return _buildDisplayData(source, entries);
   }
 
   Stream<MarketDisplayData> _watchLingayenMarketDisplayData() async* {
+    final source = await _loadBoardSource();
+    await for (final priceRows in _cloudDataService.watchCollectionWhereIn(
+      'price_entries',
+      field: 'store_id',
+      values: source.storeIds,
+    )) {
+      final entries = priceRows
+          .map(PriceEntryModel.fromMap)
+          .where((item) => source.storeIds.contains(item.storeId))
+          .toList();
+      yield _buildDisplayData(source, entries);
+    }
+  }
+
+  Future<_BoardSource> _loadBoardSource() async {
     final stores = (await _cloudDataService.getCollection(
       'stores',
     )).map(StoreModel.fromMap).where((item) => !item.isArchived).toList();
     final storeMatches = _lingayenStores(stores);
-    final storeIds = storeMatches.map((item) => item.id).nonNulls.toSet();
-
     final commodities = (await _cloudDataService.getCollection(
       'commodities',
     )).map(CommodityModel.fromMap).toList();
     final categories = (await _cloudDataService.getCollection(
       'categories',
     )).map(CategoryModel.fromMap).toList();
-
-    await for (final priceRows in _cloudDataService.watchCollection(
-      'price_entries',
-    )) {
-      final entries = priceRows
-          .map(PriceEntryModel.fromMap)
-          .where((item) => storeIds.contains(item.storeId))
-          .toList();
-      final store = storeMatches.isEmpty
-          ? _fallbackLingayenMarket()
-          : _displayStoreForEntries(storeMatches, entries);
-      final storeId = store.id ?? 0;
-      yield _buildDisplayData(
-        store: store,
-        storeId: storeId,
-        commodities: commodities,
-        categories: categories,
-        entries: entries,
-      );
-    }
+    return _BoardSource(
+      stores: storeMatches,
+      storeIds: storeMatches.map((item) => item.id).nonNulls.toList(),
+      commodities: commodities,
+      categories: categories,
+    );
   }
 
-  MarketDisplayData _buildDisplayData({
-    required StoreModel store,
-    required int storeId,
-    required List<CommodityModel> commodities,
-    required List<CategoryModel> categories,
-    required List<PriceEntryModel> entries,
-  }) {
-    entries.sort((a, b) {
-      final timeSort = b.recordedAt.compareTo(a.recordedAt);
-      if (timeSort != 0) {
-        return timeSort;
-      }
-      return (b.id ?? 0).compareTo(a.id ?? 0);
-    });
-
-    final latestByCommodity = <int, PriceEntryModel>{};
-    final previousByCommodity = <int, PriceEntryModel>{};
+  MarketDisplayData _buildDisplayData(
+    _BoardSource source,
+    List<PriceEntryModel> entries,
+  ) {
+    final store = source.stores.isEmpty
+        ? _fallbackLingayenMarket()
+        : _displayStoreForEntries(source.stores, entries);
+    final categoryNames = {
+      for (final category in source.categories) category.id: category.name,
+    };
+    final entriesByCommodity = <int, List<PriceEntryModel>>{};
     for (final entry in entries) {
-      if (!latestByCommodity.containsKey(entry.commodityId)) {
-        latestByCommodity[entry.commodityId] = entry;
-      } else if (!previousByCommodity.containsKey(entry.commodityId)) {
-        previousByCommodity[entry.commodityId] = entry;
-      }
+      entriesByCommodity.putIfAbsent(entry.commodityId, () => []).add(entry);
     }
 
-    final commodityIds =
-        commodities
-            .where((commodity) {
-              if (commodity.id == null) return false;
-              final category = categories
-                  .where((item) => item.id == commodity.categoryId)
-                  .firstOrNull;
-              return _isPublicBoardCategory(category?.name);
-            })
-            .map((commodity) => commodity.id!)
+    final boardCommodities =
+        source.commodities
+            .where(
+              (commodity) =>
+                  commodity.id != null &&
+                  _isPublicBoardCategory(categoryNames[commodity.categoryId]),
+            )
             .toList()
           ..sort((a, b) {
-            final commodityA = commodities
-                .where((item) => item.id == a)
-                .firstOrNull;
-            final commodityB = commodities
-                .where((item) => item.id == b)
-                .firstOrNull;
-            final categoryA = categories
-                .where((item) => item.id == commodityA?.categoryId)
-                .firstOrNull;
-            final categoryB = categories
-                .where((item) => item.id == commodityB?.categoryId)
-                .firstOrNull;
-            final categorySort = (categoryA?.name ?? 'Uncategorized').compareTo(
-              categoryB?.name ?? 'Uncategorized',
+            final categorySort = (categoryNames[a.categoryId] ?? '').compareTo(
+              categoryNames[b.categoryId] ?? '',
             );
-            if (categorySort != 0) {
-              return categorySort;
-            }
-            return (commodityA?.name ?? '').compareTo(commodityB?.name ?? '');
+            return categorySort != 0 ? categorySort : a.name.compareTo(b.name);
           });
 
     DateTime? lastUpdatedAt;
-    final items = commodityIds
-        .map((commodityId) {
-          final latest = latestByCommodity[commodityId];
-          final previous = previousByCommodity[commodityId];
-          final commodity = commodities
-              .where((item) => item.id == commodityId)
-              .firstOrNull;
-          if (commodity == null) {
-            return null;
-          }
-          final category = categories
-              .where((item) => item.id == commodity.categoryId)
-              .firstOrNull;
-          if (!_isPublicBoardCategory(category?.name)) {
-            return null;
-          }
-          final recordedAt =
-              latest?.recordedAt ?? DateTime.now().toUtc().toIso8601String();
-          final recordedAtDate = DateTime.tryParse(recordedAt);
-          if (recordedAtDate != null &&
-              (lastUpdatedAt == null ||
-                  recordedAtDate.isAfter(lastUpdatedAt!))) {
-            lastUpdatedAt = recordedAtDate;
-          }
-          return MarketDisplayPriceItem(
-            commodityId: commodityId,
-            commodityName: commodity.name,
-            categoryName: category?.name ?? 'Uncategorized',
-            unit: commodity.unit,
-            srp: commodity.srp,
-            currentPrice: latest?.price ?? commodity.srp,
-            previousPrice: previous?.price ?? latest?.price ?? commodity.srp,
-            recordedAt: recordedAt,
-          );
-        })
-        .nonNulls
-        .toList();
+    final items = boardCommodities.map((commodity) {
+      // Each stall is compared with its own previous price, so differences
+      // between stalls recorded on the same day never appear as movement.
+      final market = currentMarketPrice(
+        entriesByCommodity[commodity.id] ?? const [],
+      );
+      final recordedAt = market.latestRecordedAt;
+      final recordedAtDate = recordedAt == null
+          ? null
+          : DateTime.tryParse(recordedAt);
+      if (recordedAtDate != null &&
+          (lastUpdatedAt == null || recordedAtDate.isAfter(lastUpdatedAt!))) {
+        lastUpdatedAt = recordedAtDate;
+      }
+      return MarketDisplayPriceItem(
+        commodityId: commodity.id!,
+        commodityName: commodity.name,
+        categoryName: categoryNames[commodity.categoryId] ?? 'Uncategorized',
+        unit: commodity.unit,
+        srp: commodity.srp,
+        currentPrice: market.average ?? commodity.srp,
+        previousPrice: market.previousAverage ?? commodity.srp,
+        recordedAt: recordedAt ?? '',
+        hasRecordedPrice: market.hasPrice,
+        storeCount: market.storeCount,
+        lowestPrice: market.lowest,
+        highestPrice: market.highest,
+      );
+    }).toList();
 
     return MarketDisplayData(
-      storeId: storeId,
+      storeId: store.id ?? 0,
       storeName: store.name,
       marketName: store.marketName,
       address: store.address,
@@ -250,4 +197,18 @@ class MarketDisplayRepository {
       });
     return sorted.first;
   }
+}
+
+class _BoardSource {
+  const _BoardSource({
+    required this.stores,
+    required this.storeIds,
+    required this.commodities,
+    required this.categories,
+  });
+
+  final List<StoreModel> stores;
+  final List<int> storeIds;
+  final List<CommodityModel> commodities;
+  final List<CategoryModel> categories;
 }

@@ -5,6 +5,7 @@ import 'core/di/app_dependencies.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_scroll_behavior.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 import 'features/admin/presentation/controllers/admin_controller.dart';
 import 'features/admin/data/admin_repository.dart';
 import 'features/auth/presentation/controllers/auth_controller.dart';
@@ -32,10 +33,12 @@ class PriceWatchApp extends StatelessWidget {
     super.key,
     required this.dependencies,
     required this.authController,
+    required this.themeController,
   });
 
   final AppDependencies dependencies;
   final AuthController authController;
+  final ThemeController themeController;
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +71,7 @@ class PriceWatchApp extends StatelessWidget {
         ),
         Provider<AdminRepository>.value(value: dependencies.adminRepository),
         ChangeNotifierProvider<AuthController>.value(value: authController),
+        ChangeNotifierProvider<ThemeController>.value(value: themeController),
         ChangeNotifierProvider(
           create: (_) =>
               HomeController(homeRepository: dependencies.homeRepository),
@@ -99,6 +103,7 @@ class PriceWatchApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => NotificationController(
             notificationRepository: dependencies.notificationRepository,
+            watchlistRepository: dependencies.watchlistRepository,
           ),
         ),
         ChangeNotifierProvider(
@@ -111,14 +116,17 @@ class PriceWatchApp extends StatelessWidget {
               AdminController(adminRepository: dependencies.adminRepository),
         ),
       ],
-      child: MaterialApp.router(
-        title: 'PriceWatch',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        scrollBehavior: const AppScrollBehavior(),
-        routerConfig: router,
+      child: Consumer<ThemeController>(
+        builder: (context, theme, _) => MaterialApp.router(
+          title: 'PriceWatch',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: theme.mode,
+          themeAnimationDuration: const Duration(milliseconds: 250),
+          scrollBehavior: const AppScrollBehavior(),
+          routerConfig: router,
+        ),
       ),
     );
   }

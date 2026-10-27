@@ -12,6 +12,7 @@ import '../../../../shared/widgets/responsive_page.dart';
 import '../../../../shared/widgets/shimmer_skeleton.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/notification_controller.dart';
+import '../../../admin/presentation/widgets/admin_page_frame.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -39,7 +40,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final userId = auth.currentUser?.id;
     final grouped = _groupNotifications(controller.notifications);
     final narrow = MediaQuery.sizeOf(context).width < 390;
-    final useWebShell = MediaQuery.sizeOf(context).width >= 1024;
+    final useWebShell =
+        MediaQuery.sizeOf(context).width >= adminWebLayoutBreakpoint;
 
     return Scaffold(
       appBar: useWebShell
@@ -346,10 +348,17 @@ class _NotificationCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: visual.color.withValues(alpha: 0.09),
+              color: AppColors.readableFor(
+                context,
+                visual.color,
+              ).withValues(alpha: 0.09),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(visual.icon, color: visual.color, size: 21),
+            child: Icon(
+              visual.icon,
+              color: AppColors.readableFor(context, visual.color),
+              size: 21,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -425,7 +434,11 @@ class _NotificationCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Icon(visual.icon, size: 14, color: visual.color),
+                    Icon(
+                      visual.icon,
+                      size: 14,
+                      color: AppColors.readableFor(context, visual.color),
+                    ),
                     const SizedBox(width: 5),
                     Flexible(
                       child: Text(
@@ -433,7 +446,7 @@ class _NotificationCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: visual.color,
+                          color: AppColors.readableFor(context, visual.color),
                           fontWeight: FontWeight.w800,
                         ),
                       ),

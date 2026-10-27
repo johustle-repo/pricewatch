@@ -10,6 +10,8 @@ import '../../../../shared/widgets/app_shell_menu_button.dart';
 import '../../../../shared/widgets/responsive_page.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../vendor/presentation/screens/vendor_workspace_screen.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class UserModuleScreen extends StatelessWidget {
   const UserModuleScreen({
@@ -42,6 +44,8 @@ class UserModuleScreen extends StatelessWidget {
               leading: const AppShellMenuButton(),
               title: const Text('Buyer Workspace'),
               actions: [
+                const PriceWatchGuideButton(),
+                const ThemeModeButton(),
                 const AppNotificationButton(),
                 IconButton(
                   tooltip: 'Public view',
@@ -458,7 +462,7 @@ class _JourneyStep extends StatelessWidget {
                 color: AppColors.primary.withValues(alpha: .12),
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: Icon(icon, color: AppColors.primary, size: 20),
+              child: Icon(icon, color: AppColors.accentFor(context), size: 20),
             ),
             Positioned(
               right: -5,
@@ -534,8 +538,8 @@ class _WebSectionHeading extends StatelessWidget {
     children: [
       Text(
         eyebrow,
-        style: const TextStyle(
-          color: AppColors.primary,
+        style: TextStyle(
+          color: AppColors.accentFor(context),
           fontSize: 11,
           fontWeight: FontWeight.w900,
           letterSpacing: .8,
@@ -582,7 +586,10 @@ class _BuyerWebServiceCard extends StatelessWidget {
               child: Icon(
                 module.icon,
                 size: 112,
-                color: module.color.withValues(alpha: .055),
+                color: AppColors.readableFor(
+                  context,
+                  module.color,
+                ).withValues(alpha: .055),
               ),
             ),
             Column(
@@ -594,10 +601,17 @@ class _BuyerWebServiceCard extends StatelessWidget {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: module.color.withValues(alpha: .13),
+                        color: AppColors.readableFor(
+                          context,
+                          module.color,
+                        ).withValues(alpha: .13),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(module.icon, color: module.color, size: 20),
+                      child: Icon(
+                        module.icon,
+                        color: AppColors.readableFor(context, module.color),
+                        size: 20,
+                      ),
                     ),
                     const Spacer(),
                     const Icon(Icons.north_east_rounded, size: 19),
@@ -749,7 +763,7 @@ class _BuyerGuideRow extends StatelessWidget {
             color: AppColors.primary.withValues(alpha: .11),
             borderRadius: BorderRadius.circular(11),
           ),
-          child: Icon(icon, color: AppColors.primary, size: 19),
+          child: Icon(icon, color: AppColors.accentFor(context), size: 19),
         ),
         const SizedBox(width: 11),
         Expanded(
@@ -977,7 +991,7 @@ class _BuyerModuleCard extends StatelessWidget {
     final useDark = AppColors.isDark(context);
     final color = useDark && module.color == AppColors.sky
         ? AppColors.darkPrimarySoft
-        : module.color;
+        : AppColors.readableFor(context, module.color);
 
     return Material(
       color: Colors.transparent,

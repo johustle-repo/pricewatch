@@ -378,6 +378,156 @@ class _CommodityMonitoringTable extends StatelessWidget {
 
 enum _TrendInterval { day, week, month, year }
 
+/// Pill-shaped Day / Week / Month / Year switch with a sliding highlight.
+/// Segments share one width so labels never wrap.
+class _IntervalSelector extends StatelessWidget {
+  const _IntervalSelector({
+    required this.selected,
+    required this.describe,
+    required this.onChanged,
+  });
+
+  final _TrendInterval selected;
+  final String Function(_TrendInterval) describe;
+  final ValueChanged<_TrendInterval> onChanged;
+
+  static const double _maxSegmentWidth = 66;
+  static const double _height = 38;
+  static const double _inset = 4;
+
+  static String _label(_TrendInterval interval) => switch (interval) {
+    _TrendInterval.day => 'Day',
+    _TrendInterval.week => 'Week',
+    _TrendInterval.month => 'Month',
+    _TrendInterval.year => 'Year',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    const values = _TrendInterval.values;
+    final theme = Theme.of(context);
+    final isDark = AppColors.isDark(context);
+    final index = values.indexOf(selected);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Fit the space the parent allows (section actions are capped).
+        final available = constraints.maxWidth.isFinite
+            ? constraints.maxWidth - _inset * 2 - 2
+            : _maxSegmentWidth * values.length;
+        final segmentWidth = (available / values.length).clamp(
+          44.0,
+          _maxSegmentWidth,
+        );
+        return _build(context, theme, isDark, index, segmentWidth);
+      },
+    );
+  }
+
+  Widget _build(
+    BuildContext context,
+    ThemeData theme,
+    bool isDark,
+    int index,
+    double segmentWidth,
+  ) {
+    const values = _TrendInterval.values;
+    return Container(
+      height: _height + _inset * 2,
+      padding: const EdgeInsets.all(_inset),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMutedFor(context),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.borderFor(context)),
+      ),
+      child: SizedBox(
+        width: segmentWidth * values.length,
+        child: Stack(
+          children: [
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              left: segmentWidth * index,
+              top: 0,
+              bottom: 0,
+              width: segmentWidth,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isDark
+                        ? const [
+                            AppColors.darkPrimary,
+                            AppColors.darkPrimaryDeep,
+                          ]
+                        : const [AppColors.primary, AppColors.primaryDark],
+                  ),
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.28),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                for (final interval in values)
+                  Semantics(
+                    button: true,
+                    selected: interval == selected,
+                    label: '${_label(interval)} view. ${describe(interval)}',
+                    excludeSemantics: true,
+                    child: Tooltip(
+                      message: describe(interval),
+                      waitDuration: const Duration(milliseconds: 500),
+                      child: InkWell(
+                        onTap: interval == selected
+                            ? null
+                            : () => onChanged(interval),
+                        borderRadius: BorderRadius.circular(999),
+                        child: SizedBox(
+                          width: segmentWidth,
+                          height: _height,
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: AnimatedDefaultTextStyle(
+                                duration: const Duration(milliseconds: 180),
+                                style:
+                                    (theme.textTheme.labelLarge ??
+                                            const TextStyle())
+                                        .copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: interval == selected
+                                              ? Colors.white
+                                              : AppColors.textSecondaryFor(
+                                                  context,
+                                                ),
+                                        ),
+                                child: Text(
+                                  _label(interval),
+                                  maxLines: 1,
+                                  softWrap: false,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _MarketTrendChart extends StatefulWidget {
   const _MarketTrendChart({required this.analytics});
 
@@ -444,26 +594,10 @@ class _MarketTrendChartState extends State<_MarketTrendChart> {
       subtitle:
           '${_windowDescription(_interval)} Market average and optional store '
           'price per ${selectedTrend?.unit ?? 'unit'}, compared with SRP.',
-      action: SegmentedButton<_TrendInterval>(
-        showSelectedIcon: false,
-        segments: const [
-          ButtonSegment(value: _TrendInterval.day, label: Text('Day')),
-          ButtonSegment(value: _TrendInterval.week, label: Text('Week')),
-          ButtonSegment(value: _TrendInterval.month, label: Text('Month')),
-          ButtonSegment(value: _TrendInterval.year, label: Text('Year')),
-        ],
-        selected: {_interval},
-        onSelectionChanged: (selection) {
-          setState(() => _interval = selection.first);
-        },
-        style: ButtonStyle(
-          visualDensity: VisualDensity.compact,
-          textStyle: WidgetStatePropertyAll(
-            Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-        ),
+      action: _IntervalSelector(
+        selected: _interval,
+        describe: _windowDescription,
+        onChanged: (interval) => setState(() => _interval = interval),
       ),
       child: selectedTrend == null
           ? const EmptyStateView(
@@ -891,12 +1025,12 @@ class _TrendFilters extends StatelessWidget {
             SizedBox(
               width: fieldWidth,
               child: DropdownButtonFormField<int>(
+                isExpanded: true,
                 initialValue: selectedCommodityId,
                 decoration: const InputDecoration(
                   labelText: 'Commodity',
                   prefixIcon: Icon(Icons.inventory_2_outlined),
                 ),
-                isExpanded: true,
                 items: trends
                     .map(
                       (item) => DropdownMenuItem(
@@ -916,12 +1050,12 @@ class _TrendFilters extends StatelessWidget {
             SizedBox(
               width: fieldWidth,
               child: DropdownButtonFormField<int?>(
+                isExpanded: true,
                 initialValue: selectedStoreId,
                 decoration: const InputDecoration(
                   labelText: 'Store comparison',
                   prefixIcon: Icon(Icons.storefront_outlined),
                 ),
-                isExpanded: true,
                 items: [
                   const DropdownMenuItem<int?>(
                     value: null,
@@ -1519,6 +1653,7 @@ class _InlineInsightRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppColors.readableFor(context, this.accent);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

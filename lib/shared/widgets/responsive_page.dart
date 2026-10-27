@@ -57,11 +57,13 @@ class ResponsivePage extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isDesktopLike = constraints.maxWidth >= 720;
-        final horizontal = edgeToEdgeDesktopOnly && !isDesktopLike
+        // Shells do not pad their content, so pages always keep a gutter;
+        // without one, cards run into the screen edge and the sidebar.
+        final horizontal = edgeToEdgeDesktopOnly
             ? horizontalPaddingFor(context)
             : (horizontalPadding ?? horizontalPaddingFor(context));
-        final resolvedTop = edgeToEdgeDesktopOnly && !isDesktopLike
-            ? AppSpacing.md
+        final resolvedTop = edgeToEdgeDesktopOnly
+            ? math.max(topPadding, AppSpacing.md)
             : topPadding;
         final resolvedBottom = edgeToEdgeDesktopOnly && !isDesktopLike
             ? AppSpacing.xxxl + 12

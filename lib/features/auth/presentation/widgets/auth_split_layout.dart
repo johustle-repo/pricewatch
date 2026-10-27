@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../shared/widgets/app_seal_badge.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class AuthSplitLayout extends StatelessWidget {
   const AuthSplitLayout({
@@ -25,6 +27,31 @@ class AuthSplitLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(child: _buildLayout(context)),
+        Positioned(
+          top: 8,
+          right: 8,
+          child: SafeArea(
+            child: Material(
+              color: Theme.of(
+                context,
+              ).colorScheme.surface.withValues(alpha: 0.9),
+              shape: const StadiumBorder(),
+              elevation: 1,
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [PriceWatchGuideButton(), ThemeModeButton()],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLayout(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final useSplitLayout = kIsWeb && constraints.maxWidth >= 1080;

@@ -1,8 +1,10 @@
 import '../../../core/database/cloud_data_service.dart';
+import '../../../core/utils/market_prices.dart';
 import '../../../shared/models/category_model.dart';
 import '../../../shared/models/commodity_model.dart';
 import '../../../shared/models/price_entry_model.dart';
 import '../../../shared/models/store_model.dart';
+import '../../../shared/models/subcategory_model.dart';
 import '../../../shared/models/watchlist_model.dart';
 import '../../../shared/models/ui_models.dart';
 
@@ -17,6 +19,18 @@ class CommodityRepository {
         (await _cloudDataService.getCollection(
             'categories',
           )).map(CategoryModel.fromMap).toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
+    return rows;
+  }
+
+  Future<List<SubcategoryModel>> getSubcategories({int? categoryId}) async {
+    final rows =
+        (await _cloudDataService.getCollection('subcategories'))
+            .map(SubcategoryModel.fromMap)
+            .where(
+              (item) => categoryId == null || item.categoryId == categoryId,
+            )
+            .toList()
           ..sort((a, b) => a.name.compareTo(b.name));
     return rows;
   }
@@ -37,9 +51,16 @@ class CommodityRepository {
   }) async {
     final commodities = await getAllCommodities();
     final categories = await getCategories();
-    final priceEntries = (await _cloudDataService.getCollection(
+    final subcategoryNames = {
+      for (final item in await getSubcategories()) item.id: item.name,
+    };
+    final activeStoreIds = await _activeStoreIds();
+    final entriesByCommodity = <int, List<PriceEntryModel>>{};
+    for (final entry in (await _cloudDataService.getCollection(
       'price_entries',
-    )).map(PriceEntryModel.fromMap).toList();
+    )).map(PriceEntryModel.fromMap)) {
+      entriesByCommodity.putIfAbsent(entry.commodityId, () => []).add(entry);
+    }
     final watchedIds = userId == null
         ? <int>{}
         : ((await _cloudDataService.getCollectionWhere(
@@ -54,8 +75,11 @@ class CommodityRepository {
 
     final normalized = query.trim().toLowerCase();
     final filtered = commodities.where((item) {
+      final subcategoryName = subcategoryNames[item.subcategoryId] ?? '';
       final matchesQuery =
-          normalized.isEmpty || item.name.toLowerCase().contains(normalized);
+          normalized.isEmpty ||
+          item.name.toLowerCase().contains(normalized) ||
+          subcategoryName.toLowerCase().contains(normalized);
       final matchesCategory =
           categoryId == null || item.categoryId == categoryId;
       return matchesQuery && matchesCategory;
@@ -70,21 +94,38 @@ class CommodityRepository {
           final category = categories
               .where((item) => item.id == commodity.categoryId)
               .firstOrNull;
-          final latest = _latestAverageForCommodity(priceEntries, commodityId);
+          final market = currentMarketPrice(
+            entriesByCommodity[commodityId] ?? const [],
+            activeStoreIds: activeStoreIds,
+          );
           return CommodityOverview(
             id: commodityId,
             categoryId: commodity.categoryId,
             categoryName: category?.name ?? 'Uncategorized',
+            subcategoryId: subcategoryNames.containsKey(commodity.subcategoryId)
+                ? commodity.subcategoryId
+                : null,
+            subcategoryName: subcategoryNames[commodity.subcategoryId],
             name: commodity.name,
             unit: commodity.unit,
             srp: commodity.srp,
-            latestAveragePrice: latest.$1 == 0 ? commodity.srp : latest.$1,
-            latestUpdatedAt: latest.$2,
+            latestAveragePrice: market.average ?? commodity.srp,
+            latestUpdatedAt: market.latestRecordedAt ?? '',
+            storeCount: market.storeCount,
             isWatched: watchedIds.contains(commodityId),
           );
         })
         .nonNulls
         .toList();
+  }
+
+  Future<Set<int>> _activeStoreIds() async {
+    return (await _cloudDataService.getCollection('stores'))
+        .map(StoreModel.fromMap)
+        .where((item) => !item.isArchived)
+        .map((item) => item.id)
+        .nonNulls
+        .toSet();
   }
 
   Future<CommodityDetailData?> getCommodityDetail(
@@ -103,22 +144,34 @@ class CommodityRepository {
     final category = categories
         .where((item) => item.id == commodity.categoryId)
         .firstOrNull;
+    final subcategoryName = commodity.subcategoryId == null
+        ? null
+        : (await getSubcategories(categoryId: commodity.categoryId))
+              .where((item) => item.id == commodity.subcategoryId)
+              .firstOrNull
+              ?.name;
     final stores = (await _cloudDataService.getCollection(
       'stores',
     )).map(StoreModel.fromMap).where((item) => !item.isArchived).toList();
+    final activeStoreIds = stores.map((item) => item.id).nonNulls.toSet();
     final entries =
-        (await _cloudDataService.getCollection('price_entries'))
+        (await _cloudDataService.getCollectionWhere(
+              'price_entries',
+              field: 'commodity_id',
+              value: commodityId,
+            ))
             .map(PriceEntryModel.fromMap)
-            .where((item) => item.commodityId == commodityId)
+            .where(
+              (item) =>
+                  item.commodityId == commodityId &&
+                  activeStoreIds.contains(item.storeId),
+            )
             .toList()
           ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-    final latestByStore = <int, PriceEntryModel>{};
-    for (final entry in entries) {
-      latestByStore.putIfAbsent(entry.storeId, () => entry);
-    }
+    final market = currentMarketPrice(entries);
 
     final snapshots =
-        latestByStore.values
+        market.latest
             .map((entry) {
               final store = stores
                   .where((item) => item.id == entry.storeId)
@@ -171,17 +224,6 @@ class CommodityRepository {
               )
               .toList();
 
-    final average = snapshots.isEmpty
-        ? commodity.srp
-        : snapshots.map((e) => e.price).reduce((a, b) => a + b) /
-              snapshots.length;
-    final lowest = snapshots.isEmpty
-        ? commodity.srp
-        : snapshots.map((e) => e.price).reduce((a, b) => a < b ? a : b);
-    final highest = snapshots.isEmpty
-        ? commodity.srp
-        : snapshots.map((e) => e.price).reduce((a, b) => a > b ? a : b);
-
     return CommodityDetailData(
       commodity: commodity,
       category:
@@ -192,42 +234,17 @@ class CommodityRepository {
             icon: 'category',
             createdAt: '',
           ),
+      subcategoryName: subcategoryName,
       latestStorePrices: snapshots,
-      priceEntries: entries
-          .where((entry) => stores.any((store) => store.id == entry.storeId))
-          .toList(),
+      priceEntries: entries,
       history: history,
-      averagePrice: average,
-      lowestPrice: lowest,
-      highestPrice: highest,
+      hasRecordedPrice: market.hasPrice,
+      latestRecordedAt: market.latestRecordedAt,
+      averagePrice: market.average ?? commodity.srp,
+      lowestPrice: market.lowest ?? commodity.srp,
+      highestPrice: market.highest ?? commodity.srp,
       isWatched: watchInfo?.isNotEmpty == true,
       watchThreshold: watchInfo?.firstOrNull?.priceThreshold,
     );
-  }
-
-  (double, String) _latestAverageForCommodity(
-    List<PriceEntryModel> entries,
-    int commodityId,
-  ) {
-    final commodityEntries =
-        entries.where((item) => item.commodityId == commodityId).toList()
-          ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-    if (commodityEntries.isEmpty) {
-      return (0, '');
-    }
-
-    final latestByStore = <int, PriceEntryModel>{};
-    for (final entry in commodityEntries) {
-      latestByStore.putIfAbsent(entry.storeId, () => entry);
-    }
-
-    final latestEntries = latestByStore.values.toList();
-    final average =
-        latestEntries.map((item) => item.price).reduce((a, b) => a + b) /
-        latestEntries.length;
-    final latestRecordedAt = latestEntries
-        .map((item) => item.recordedAt)
-        .reduce((a, b) => a.compareTo(b) > 0 ? a : b);
-    return (average, latestRecordedAt);
   }
 }

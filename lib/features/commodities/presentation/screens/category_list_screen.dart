@@ -12,6 +12,9 @@ import '../../../../shared/widgets/app_surface_card.dart';
 import '../../../../shared/widgets/empty_state_view.dart';
 import '../../../../shared/widgets/responsive_page.dart';
 import '../controllers/commodity_controller.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../admin/presentation/widgets/admin_page_frame.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class CategoryListScreen extends StatefulWidget {
   const CategoryListScreen({super.key});
@@ -31,7 +34,8 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final useWebShell = MediaQuery.sizeOf(context).width >= 1024;
+    final useWebShell =
+        MediaQuery.sizeOf(context).width >= adminWebLayoutBreakpoint;
     final controller = context.watch<CommodityController>();
     final categories = controller.categories;
 
@@ -41,7 +45,12 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
           : AppBar(
               leading: const AppShellMenuButton(),
               title: const Text('Categories'),
-              actions: const [AppNotificationButton(), SizedBox(width: 8)],
+              actions: const [
+                PriceWatchGuideButton(),
+                ThemeModeButton(),
+                AppNotificationButton(),
+                SizedBox(width: 8),
+              ],
             ),
       body: AppBackground(
         child: categories.isEmpty
@@ -133,7 +142,7 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                                     ),
                                     child: Icon(
                                       AppIconMapper.fromKey(category.icon),
-                                      color: AppColors.primaryDark,
+                                      color: AppColors.accentFor(context),
                                       size: 26,
                                     ),
                                   ),

@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 
 import '../../../core/database/cloud_data_service.dart';
+import '../../../core/utils/app_formatters.dart';
 import '../../../shared/models/user_model.dart';
 
 class ProfileRepository {
@@ -33,10 +34,10 @@ class ProfileRepository {
     if (normalizedEmail != user.email) {
       await authUser.verifyBeforeUpdateEmail(normalizedEmail);
     }
-    await authUser.updateDisplayName(fullName.trim());
+    await authUser.updateDisplayName(AppFormatters.personName(fullName));
     await _cloudDataService.setDocument('users', userId, {
       ...user.toMap(),
-      'full_name': fullName.trim(),
+      'full_name': AppFormatters.personName(fullName),
       // Firebase keeps the old address active until verification completes.
       'email': authUser.email ?? user.email,
     });

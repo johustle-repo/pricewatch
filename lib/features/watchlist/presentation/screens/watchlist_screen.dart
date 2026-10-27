@@ -8,6 +8,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/app_formatters.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/models/ui_models.dart';
+import '../../../../shared/widgets/price_freshness_chip.dart';
 import '../../../../shared/widgets/app_background.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_notification_button.dart';
@@ -21,6 +22,9 @@ import '../../../../shared/widgets/responsive_page.dart';
 import '../../../../shared/widgets/shimmer_skeleton.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/watchlist_controller.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../admin/presentation/widgets/admin_page_frame.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class WatchlistScreen extends StatefulWidget {
   const WatchlistScreen({super.key});
@@ -68,7 +72,8 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
               item.threshold != null && item.currentPrice > item.threshold!,
         )
         .length;
-    final useWebShell = MediaQuery.sizeOf(context).width >= 1024;
+    final useWebShell =
+        MediaQuery.sizeOf(context).width >= adminWebLayoutBreakpoint;
 
     return Scaffold(
       appBar: useWebShell
@@ -77,6 +82,8 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
               leading: const AppShellMenuButton(),
               title: const Text('Watchlist'),
               actions: [
+                const PriceWatchGuideButton(),
+                const ThemeModeButton(),
                 const AppNotificationButton(),
                 IconButton(
                   onPressed: () => context.push('/commodities'),
@@ -104,10 +111,8 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
                             parent: BouncingScrollPhysics(),
                           ),
                           children: [
-                            _WatchlistHero(
-                              userName:
-                                  auth.currentUser?.fullName.split(' ').first ??
-                                  'User',
+                            const SizedBox(height: AppSpacing.md),
+                            _WatchlistSummary(
                               itemCount: items.length,
                               activeAlerts: activeAlerts,
                             ),
@@ -131,51 +136,6 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
                                 ),
                               ),
                             ],
-                            const SizedBox(height: AppSpacing.lg),
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                final compact = constraints.maxWidth < 360;
-                                final first = AppSurfaceCard(
-                                  child: _MiniStat(
-                                    label: 'Tracking',
-                                    value: '${items.length} items',
-                                    icon: Icons.bookmark_rounded,
-                                  ),
-                                );
-                                final second = AppSurfaceCard(
-                                  child: _MiniStat(
-                                    label: 'Threshold alerts',
-                                    value: '$activeAlerts active',
-                                    icon: Icons.notifications_active_rounded,
-                                    accent: AppColors.warning,
-                                  ),
-                                );
-
-                                if (compact) {
-                                  return Column(
-                                    children: [
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: first,
-                                      ),
-                                      const SizedBox(height: 12),
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: second,
-                                      ),
-                                    ],
-                                  );
-                                }
-
-                                return Row(
-                                  children: [
-                                    Expanded(child: first),
-                                    const SizedBox(width: 12),
-                                    Expanded(child: second),
-                                  ],
-                                );
-                              },
-                            ),
                             const SizedBox(height: AppSpacing.xl),
                             LayoutBuilder(
                               builder: (context, constraints) {
@@ -328,171 +288,6 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
   }
 }
 
-class _WatchlistHero extends StatelessWidget {
-  const _WatchlistHero({
-    required this.userName,
-    required this.itemCount,
-    required this.activeAlerts,
-  });
-
-  final String userName;
-  final int itemCount;
-  final int activeAlerts;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        gradient: AppColors.heroGradientFor(context),
-        borderRadius: BorderRadius.circular(34),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.glowStrong,
-            blurRadius: 28,
-            offset: Offset(0, 16),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$userName\'s watchlist',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Stay ahead of price spikes with local threshold alerts and trend tracking.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.86),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxWidth < 380;
-              final tracked = _HeroMetric(
-                label: 'Tracked items',
-                value: '$itemCount',
-              );
-              final alerts = _HeroMetric(
-                label: 'Active alerts',
-                value: '$activeAlerts',
-              );
-
-              if (compact) {
-                return Column(
-                  children: [
-                    SizedBox(width: double.infinity, child: tracked),
-                    const SizedBox(height: 12),
-                    SizedBox(width: double.infinity, child: alerts),
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  Expanded(child: tracked),
-                  const SizedBox(width: 12),
-                  Expanded(child: alerts),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroMetric extends StatelessWidget {
-  const _HeroMetric({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.82),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniStat extends StatelessWidget {
-  const _MiniStat({
-    required this.label,
-    required this.value,
-    required this.icon,
-    this.accent = AppColors.primary,
-  });
-
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            color: accent.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Icon(icon, color: accent),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 4),
-              Text(label, style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _WatchlistCard extends StatelessWidget {
   const _WatchlistCard({
     required this.item,
@@ -508,186 +303,123 @@ class _WatchlistCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hasPrice = item.updatedAt.isNotEmpty;
     final aboveThreshold =
-        item.threshold != null && item.currentPrice > item.threshold!;
-    final varianceLabel =
-        '${item.variance >= 0 ? '+' : '-'}${AppFormatters.currency(item.variance.abs())} vs previous';
+        hasPrice &&
+        item.threshold != null &&
+        item.currentPrice > item.threshold!;
+    final change = item.variance;
+    final flat = !hasPrice || change.abs() < 0.005;
 
     return AppSurfaceCard(
       onTap: onTap,
+      padding: const EdgeInsets.all(14),
       borderColor: aboveThreshold
-          ? AppColors.warning.withValues(alpha: 0.25)
+          ? AppColors.warning.withValues(alpha: 0.35)
           : AppColors.borderFor(context),
-      gradient: aboveThreshold
-          ? LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: AppColors.isDark(context)
-                  ? const [Color(0xFF412821), Color(0xFF28171A)]
-                  : const [Color(0xFFFFFBF5), Color(0xFFFFFFFF)],
-            )
-          : null,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 380;
-          final content = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
+              CommodityVisual(
+                label: item.commodityName,
+                size: 48,
+                useIllustration: false,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
                       item.commodityName,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'edit') {
-                        onEdit();
-                      } else if (value == 'remove') {
-                        onRemove();
-                      }
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(
-                        value: 'edit',
-                        child: Text('Edit threshold'),
-                      ),
-                      PopupMenuItem(
-                        value: 'remove',
-                        child: Text('Remove item'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Text(item.unit, style: Theme.of(context).textTheme.bodySmall),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  PriceTrendBadge(delta: item.variance, label: varianceLabel),
-                  AppStatusBadge(
-                    label: item.threshold == null
-                        ? 'No threshold'
-                        : 'Alert at ${AppFormatters.currency(item.threshold!)}',
-                    color: aboveThreshold
-                        ? AppColors.warning
-                        : AppColors.primaryDark,
-                    icon: aboveThreshold
-                        ? Icons.warning_amber_rounded
-                        : Icons.tune_rounded,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _PriceColumn(
-                      label: 'Current',
-                      value: AppFormatters.currency(item.currentPrice),
-                    ),
-                  ),
-                  Expanded(
-                    child: _PriceColumn(
-                      label: 'Previous',
-                      value: AppFormatters.currency(item.previousPrice),
-                    ),
-                  ),
-                  Expanded(
-                    child: _PriceColumn(
-                      label: 'SRP',
-                      value: AppFormatters.currency(item.srp),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              if (compact) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: _MiniTrendChart(item: item),
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    AppFormatters.dateTime(item.updatedAt),
-                    textAlign: TextAlign.right,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-              ] else
-                Row(
-                  children: [
-                    Expanded(child: _MiniTrendChart(item: item)),
-                    const SizedBox(width: 12),
-                    Flexible(
-                      child: Text(
-                        AppFormatters.dateTime(item.updatedAt),
-                        textAlign: TextAlign.right,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+                    const SizedBox(height: 2),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          'per ${item.unit}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondaryFor(context),
+                          ),
+                        ),
+                        PriceFreshnessChip(recordedAt: item.updatedAt),
+                      ],
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                hasPrice ? AppFormatters.currency(item.currentPrice) : '\u2014',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'More options',
+                padding: EdgeInsets.zero,
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    onEdit();
+                  } else if (value == 'remove') {
+                    onRemove();
+                  }
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'edit', child: Text('Edit alert')),
+                  PopupMenuItem(value: 'remove', child: Text('Remove item')),
+                ],
+              ),
             ],
-          );
-
-          if (compact) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CommodityVisual(label: item.commodityName, size: 70),
-                const SizedBox(height: 16),
-                content,
-              ],
-            );
-          }
-
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          if (hasPrice) ...[
+            const SizedBox(height: 10),
+            _MiniTrendChart(item: item),
+          ],
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              CommodityVisual(label: item.commodityName, size: 70),
-              const SizedBox(width: 16),
-              Expanded(child: content),
+              if (hasPrice)
+                PriceTrendBadge(
+                  delta: flat ? 0 : change,
+                  label: flat
+                      ? 'No change'
+                      : '${AppFormatters.currency(change.abs())} vs previous',
+                ),
+              AppStatusBadge(
+                label: 'SRP ${AppFormatters.currency(item.srp)}',
+                color: AppColors.textSecondaryFor(context),
+              ),
+              AppStatusBadge(
+                label: item.threshold == null
+                    ? 'Set an alert'
+                    : aboveThreshold
+                    ? 'Above alert ${AppFormatters.currency(item.threshold!)}'
+                    : 'Alert at ${AppFormatters.currency(item.threshold!)}',
+                color: aboveThreshold
+                    ? AppColors.warningText
+                    : AppColors.primaryDark,
+                icon: aboveThreshold
+                    ? Icons.warning_amber_rounded
+                    : Icons.notifications_none_rounded,
+              ),
             ],
-          );
-        },
+          ),
+        ],
       ),
-    );
-  }
-}
-
-class _PriceColumn extends StatelessWidget {
-  const _PriceColumn({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-        ),
-      ],
     );
   }
 }
@@ -699,8 +431,10 @@ class _MiniTrendChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isUp = item.variance >= 0;
-    final color = isUp ? AppColors.warning : AppColors.primaryDark;
+    final isUp = item.variance > 0.005;
+    final color = isUp
+        ? AppColors.warning
+        : AppColors.readableFor(context, AppColors.primaryDark);
     final values = item.history.isEmpty
         ? [item.previousPrice, item.currentPrice]
         : item.history.map((point) => point.value).toList();
@@ -738,6 +472,82 @@ class _MiniTrendChart extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// One-line summary of the watchlist; the items themselves come right after.
+class _WatchlistSummary extends StatelessWidget {
+  const _WatchlistSummary({
+    required this.itemCount,
+    required this.activeAlerts,
+  });
+
+  final int itemCount;
+  final int activeAlerts;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = AppColors.accentFor(context);
+    final alertColor = AppColors.readableFor(context, AppColors.warningText);
+    Widget stat(IconData icon, Color color, String value, String label) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(11),
+          ),
+          child: Icon(icon, size: 19, color: color),
+        ),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.textSecondaryFor(context),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceFor(context),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.borderFor(context)),
+      ),
+      child: Wrap(
+        spacing: AppSpacing.xl,
+        runSpacing: AppSpacing.sm,
+        children: [
+          stat(
+            Icons.bookmark_rounded,
+            accent,
+            '$itemCount',
+            itemCount == 1 ? 'item tracked' : 'items tracked',
+          ),
+          stat(
+            Icons.notifications_active_rounded,
+            activeAlerts > 0 ? alertColor : AppColors.textSecondaryFor(context),
+            '$activeAlerts',
+            activeAlerts == 1 ? 'above your alert' : 'above your alerts',
+          ),
+        ],
       ),
     );
   }

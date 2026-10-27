@@ -48,3 +48,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Visual audit output (regenerate with test_visual/screens_visual_test.dart)
+test_visual/goldens/
+test_visual/issues.txt

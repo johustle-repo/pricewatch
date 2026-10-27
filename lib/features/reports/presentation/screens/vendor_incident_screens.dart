@@ -23,6 +23,8 @@ import '../../../admin/presentation/widgets/admin_page_frame.dart';
 import '../../../admin/presentation/widgets/admin_workspace_widgets.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../controllers/vendor_incident_controller.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 const _incidentReasons = <String, String>{
   'misrepresentation': 'False identity or misrepresentation',
@@ -71,7 +73,12 @@ class _AddVendorIncidentScreenState extends State<AddVendorIncidentScreen> {
           : AppBar(
               leading: const AppShellMenuButton(),
               title: const Text('Report Vendor Incident'),
-              actions: const [AppNotificationButton(), SizedBox(width: 8)],
+              actions: const [
+                PriceWatchGuideButton(),
+                ThemeModeButton(),
+                AppNotificationButton(),
+                SizedBox(width: 8),
+              ],
             ),
       body: AppBackground(
         showTopGlow: false,
@@ -536,7 +543,12 @@ class _VendorIncidentListScreenState extends State<VendorIncidentListScreen> {
           : AppBar(
               leading: const AppShellMenuButton(),
               title: const Text('Unregistered Vendors'),
-              actions: const [AppNotificationButton(), SizedBox(width: 8)],
+              actions: const [
+                PriceWatchGuideButton(),
+                ThemeModeButton(),
+                AppNotificationButton(),
+                SizedBox(width: 8),
+              ],
             ),
       body: AppBackground(
         showTopGlow: false,
@@ -703,7 +715,7 @@ class _IncidentMetric extends StatelessWidget {
         Text(
           value,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: AppColors.primary,
+            color: AppColors.accentFor(context),
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -1155,7 +1167,7 @@ class _IncidentCard extends StatelessWidget {
                           'Click to review',
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
-                                color: AppColors.primary,
+                                color: AppColors.accentFor(context),
                                 fontWeight: FontWeight.w800,
                               ),
                         ),
@@ -1220,6 +1232,7 @@ class _IncidentCard extends StatelessWidget {
                 SizedBox(
                   width: 180,
                   child: DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: incident.status,
                     decoration: const InputDecoration(labelText: 'Status'),
                     items: const [
@@ -1446,6 +1459,7 @@ Future<void> _showIncidentPreview(
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
+                        isExpanded: true,
                         initialValue: selectedStatus,
                         decoration: const InputDecoration(
                           labelText: 'Moderation status',
@@ -1540,7 +1554,7 @@ class _IncidentDetailTile extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: AppColors.primary),
+        Icon(icon, size: 20, color: AppColors.accentFor(context)),
         const SizedBox(width: 10),
         Expanded(
           child: Column(

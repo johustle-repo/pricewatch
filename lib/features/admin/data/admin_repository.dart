@@ -9,6 +9,7 @@ import '../../../shared/models/commodity_model.dart';
 import '../../../shared/models/price_entry_model.dart';
 import '../../../shared/models/report_model.dart';
 import '../../../shared/models/store_model.dart';
+import '../../../shared/models/subcategory_model.dart';
 import '../../../shared/models/ui_models.dart';
 import '../../../shared/models/user_model.dart';
 import '../../../shared/models/watchlist_model.dart';
@@ -67,6 +68,12 @@ class AdminRepository {
     if (commodities.any((item) => item['category_id'] == categoryId)) {
       throw Exception('Move or delete this category’s commodities first.');
     }
+    final subcategories = await _cloudDataService.getCollection(
+      'subcategories',
+    );
+    if (subcategories.any((item) => item['category_id'] == categoryId)) {
+      throw Exception('Delete this category’s sub-categories first.');
+    }
     await _cloudDataService.deleteDocument('categories', categoryId);
     await _audit(
       'delete',
@@ -75,6 +82,139 @@ class AdminRepository {
       'Deleted category ${category['name']}.',
     );
   }
+
+  Future<List<SubcategoryModel>> getSubcategories() async {
+    final rows =
+        (await _cloudDataService.getCollection(
+            'subcategories',
+          )).map(SubcategoryModel.fromMap).toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
+    return rows;
+  }
+
+  Future<void> saveSubcategory({
+    int? id,
+    required int categoryId,
+    required String name,
+  }) async {
+    await _requireAdmin();
+    final trimmed = name.trim();
+    final siblings = (await getSubcategories()).where(
+      (item) => item.categoryId == categoryId && item.id != id,
+    );
+    if (siblings.any(
+      (item) => item.name.toLowerCase() == trimmed.toLowerCase(),
+    )) {
+      throw Exception('$trimmed already exists in this category.');
+    }
+    final targetId = id ?? _cloudDataService.generateId();
+    final existing = id == null
+        ? null
+        : await _cloudDataService.getDocument('subcategories', targetId);
+    if (existing != null && existing['category_id'] != categoryId) {
+      final commodities = await _cloudDataService.getCollection('commodities');
+      if (commodities.any((item) => item['subcategory_id'] == targetId)) {
+        throw Exception(
+          'Move this sub-category’s commodities before changing its category.',
+        );
+      }
+    }
+    await _cloudDataService.setDocument('subcategories', targetId, {
+      'id': targetId,
+      'category_id': categoryId,
+      'name': trimmed,
+      'created_at': existing?['created_at'] ?? DateTimeUtils.nowIso(),
+    });
+    await _audit(
+      id == null ? 'create' : 'update',
+      'subcategory',
+      targetId,
+      'Saved sub-category $trimmed.',
+    );
+  }
+
+  Future<void> deleteSubcategory(int subcategoryId) async {
+    await _requireAdmin();
+    final subcategory = await _cloudDataService.getDocument(
+      'subcategories',
+      subcategoryId,
+    );
+    if (subcategory == null) throw Exception('Sub-category not found.');
+    final commodities = await _cloudDataService.getCollection('commodities');
+    if (commodities.any((item) => item['subcategory_id'] == subcategoryId)) {
+      throw Exception('Move or delete this sub-category’s commodities first.');
+    }
+    await _cloudDataService.deleteDocument('subcategories', subcategoryId);
+    await _audit(
+      'delete',
+      'subcategory',
+      subcategoryId,
+      'Deleted sub-category ${subcategory['name']}.',
+    );
+  }
+
+  /// Creates the standard market sub-categories for existing categories and
+  /// links unassigned commodities whose names mention one of them.
+  /// Returns the number of sub-categories created and commodities linked.
+  Future<(int, int)> applySuggestedSubcategories() async {
+    await _requireAdmin();
+    final categories = await getCategories();
+    final existing = await getSubcategories();
+    var created = 0;
+    for (final category in categories) {
+      final categoryId = category.id;
+      final names = suggestedSubcategories[category.name.trim().toLowerCase()];
+      if (categoryId == null || names == null) continue;
+      for (final name in names) {
+        final exists = existing.any(
+          (item) =>
+              item.categoryId == categoryId &&
+              _matchKey(item.name) == _matchKey(name),
+        );
+        if (exists) continue;
+        await saveSubcategory(categoryId: categoryId, name: name);
+        created++;
+      }
+    }
+
+    final subcategories = await getSubcategories();
+    var linked = 0;
+    for (final commodity in await getCommodities()) {
+      if (commodity.subcategoryId != null || commodity.id == null) continue;
+      final commodityKey = _matchKey(commodity.name);
+      final match = subcategories
+          .where(
+            (item) =>
+                item.categoryId == commodity.categoryId &&
+                commodityKey.contains(_matchKey(item.name)),
+          )
+          .firstOrNull;
+      if (match == null) continue;
+      await saveCommodity(
+        id: commodity.id,
+        categoryId: commodity.categoryId,
+        subcategoryId: match.id,
+        name: commodity.name,
+        description: commodity.description ?? '',
+        unit: commodity.unit,
+        srp: commodity.srp,
+      );
+      linked++;
+    }
+    return (created, linked);
+  }
+
+  /// Standard sub-categories keyed by lower-case category name, following
+  /// the commodity groupings on the market price survey sheet.
+  static const Map<String, List<String>> suggestedSubcategories = {
+    'rice': ['Premium', 'Special', 'Well-milled', 'Regular-milled'],
+    'fish': ['Tilapia', 'Galunggong', 'Bangus'],
+    'meat': ['Beef', 'Pork', 'Chicken'],
+    'eggs': ['Chicken eggs', 'Duck eggs'],
+  };
+
+  static String _matchKey(String value) =>
+      value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
   Future<List<CommodityModel>> getCommodities() async {
     final rows =
@@ -88,12 +228,22 @@ class AdminRepository {
   Future<void> saveCommodity({
     int? id,
     required int categoryId,
+    int? subcategoryId,
     required String name,
     required String description,
     required String unit,
     required double srp,
   }) async {
     await _requireAdmin();
+    if (subcategoryId != null) {
+      final subcategory = await _cloudDataService.getDocument(
+        'subcategories',
+        subcategoryId,
+      );
+      if (subcategory == null || subcategory['category_id'] != categoryId) {
+        throw Exception('The sub-category must belong to the same category.');
+      }
+    }
     final targetId = id ?? _cloudDataService.generateId();
     final existing = id == null
         ? null
@@ -101,6 +251,7 @@ class AdminRepository {
     await _cloudDataService.setDocument('commodities', targetId, {
       'id': targetId,
       'category_id': categoryId,
+      'subcategory_id': subcategoryId,
       'name': name.trim(),
       'description': description.trim(),
       'unit': unit.trim(),
@@ -259,8 +410,9 @@ class AdminRepository {
         : await _cloudDataService.getDocument('users', targetId);
     var authUid = existing?['auth_uid'] as String?;
     if (id == null) {
-      final newPassword = password?.trim() ?? '';
-      if (newPassword.length < 6) {
+      // Not trimmed: the login screen sends the password exactly as typed.
+      final newPassword = password ?? '';
+      if (newPassword.trim().length < 6) {
         throw Exception('Enter a password with at least six characters.');
       }
       authUid = await _createFirebaseAuthAccount(
@@ -281,7 +433,7 @@ class AdminRepository {
       userData: {
         'id': targetId,
         'auth_uid': authUid,
-        'full_name': fullName.trim(),
+        'full_name': AppFormatters.personName(fullName),
         'email': normalizedEmail,
         'role': role,
         'store_id': role == 'vendor' ? storeId : null,
@@ -290,7 +442,7 @@ class AdminRepository {
     );
     await _cloudDataService.synchronizeVendorStore(
       vendorUserId: targetId,
-      vendorName: fullName.trim(),
+      vendorName: AppFormatters.personName(fullName),
       previousStoreId: existing?['store_id'] as int?,
       storeId: role == 'vendor' ? storeId : null,
     );
@@ -298,7 +450,7 @@ class AdminRepository {
       id == null ? 'create' : 'update',
       'user',
       targetId,
-      'Saved $role account for ${fullName.trim()}.',
+      'Saved $role account for ${AppFormatters.personName(fullName)}.',
     );
 
     if (id == null) {
@@ -332,6 +484,40 @@ class AdminRepository {
       authUid: user.authUid,
     );
     await _audit('delete', 'user', userId, 'Deleted user ${user.fullName}.');
+  }
+
+  /// Emails the account owner a Firebase link to choose a new password.
+  /// Client apps cannot set another user's password directly.
+  Future<String> sendPasswordResetEmail(int userId) async {
+    await _requireAdmin();
+    final row = await _cloudDataService.getDocument('users', userId);
+    if (row == null) {
+      throw Exception('User not found.');
+    }
+    final user = UserModel.fromMap(row);
+    try {
+      await Dio().post<Map<String, dynamic>>(
+        'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode',
+        queryParameters: {'key': _firebaseApiKey},
+        data: {'requestType': 'PASSWORD_RESET', 'email': user.email},
+      );
+    } on DioException catch (error) {
+      final data = error.response?.data;
+      final message = data is Map
+          ? ((data['error'] as Map?)?['message'] as String?)
+          : null;
+      if (message == 'EMAIL_NOT_FOUND') {
+        throw Exception('This email has no Firebase Authentication account.');
+      }
+      throw Exception(message ?? 'Could not send the password reset email.');
+    }
+    await _audit(
+      'update',
+      'user',
+      userId,
+      'Sent password reset email to ${user.fullName}.',
+    );
+    return user.email;
   }
 
   Future<String> _createFirebaseAuthAccount({
@@ -373,6 +559,7 @@ class AdminRepository {
     required int commodityId,
     required int storeId,
     required double price,
+    String source = 'admin',
   }) async {
     await _requireAdmin();
     final timestamp = DateTimeUtils.nowIso();
@@ -383,49 +570,9 @@ class AdminRepository {
       'store_id': storeId,
       'price': price,
       'recorded_at': timestamp,
-      'source': 'admin',
+      'source': source,
     });
 
-    final commodityRow = await _cloudDataService.getDocument(
-      'commodities',
-      commodityId,
-    );
-    if (commodityRow == null) {
-      return;
-    }
-    final commodity = CommodityModel.fromMap(commodityRow);
-    final watchlists = (await _cloudDataService.getCollection('watchlists'))
-        .map(WatchlistModel.fromMap)
-        .where((item) => item.commodityId == commodityId)
-        .toList();
-
-    for (final watch in watchlists) {
-      final updatedId = _cloudDataService.generateId();
-      await _cloudDataService.setDocument('notifications', updatedId, {
-        'id': updatedId,
-        'user_id': watch.userId,
-        'title': 'Watched item updated',
-        'body':
-            '${commodity.name} has a new price update: ${AppFormatters.currency(price)}.',
-        'type': 'watched_item_updated',
-        'is_read': 0,
-        'created_at': timestamp,
-      });
-
-      if (watch.priceThreshold != null && price > watch.priceThreshold!) {
-        final thresholdId = _cloudDataService.generateId();
-        await _cloudDataService.setDocument('notifications', thresholdId, {
-          'id': thresholdId,
-          'user_id': watch.userId,
-          'title': 'Price threshold reached',
-          'body':
-              '${commodity.name} is at ${AppFormatters.currency(price)}, above your alert threshold of ${AppFormatters.currency(watch.priceThreshold!)}.',
-          'type': 'price_increase',
-          'is_read': 0,
-          'created_at': timestamp,
-        });
-      }
-    }
     await _audit(
       'create',
       'price_entry',
@@ -434,43 +581,36 @@ class AdminRepository {
     );
   }
 
-  Future<void> updateLatestPriceEntry({
+  /// Records [price] as the store's newest price, keeping earlier prices so
+  /// history and increase warnings stay intact. Returns false when the price
+  /// equals the store's current price and nothing was written.
+  Future<bool> recordPriceIfChanged({
     required int commodityId,
     required int storeId,
     required double price,
+    String source = 'csv',
   }) async {
     await _requireAdmin();
     final matches =
-        (await _cloudDataService.getCollection('price_entries'))
+        (await _cloudDataService.getCollectionWhere(
+              'price_entries',
+              field: 'commodity_id',
+              value: commodityId,
+            ))
             .map(PriceEntryModel.fromMap)
-            .where(
-              (entry) =>
-                  entry.commodityId == commodityId && entry.storeId == storeId,
-            )
+            .where((entry) => entry.storeId == storeId)
             .toList()
           ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-    if (matches.isEmpty || matches.first.id == null) {
-      await addPriceEntry(
-        commodityId: commodityId,
-        storeId: storeId,
-        price: price,
-      );
-      return;
+    if (matches.isNotEmpty && (matches.first.price - price).abs() < 0.005) {
+      return false;
     }
-    await _cloudDataService.setDocument('price_entries', matches.first.id!, {
-      'id': matches.first.id,
-      'commodity_id': commodityId,
-      'store_id': storeId,
-      'price': price,
-      'recorded_at': DateTimeUtils.nowIso(),
-      'source': 'csv',
-    });
-    await _audit(
-      'update',
-      'price_entry',
-      matches.first.id!,
-      'Updated a market price to $price.',
+    await addPriceEntry(
+      commodityId: commodityId,
+      storeId: storeId,
+      price: price,
+      source: source,
     );
+    return true;
   }
 
   Future<void> replacePriceEntries({

@@ -16,9 +16,12 @@ class PriceTrendBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isUp = delta >= 0;
+    final isFlat = delta.abs() < 0.005;
+    final isUp = delta > 0;
     final useDark = AppColors.isDark(context);
-    final color = isUp
+    final color = isFlat
+        ? AppColors.textSecondaryFor(context)
+        : isUp
         ? AppColors.warning
         : (useDark ? AppColors.darkPrimarySoft : AppColors.primaryDark);
     final background = color.withValues(alpha: useDark ? 0.18 : 0.12);
@@ -36,14 +39,23 @@ class PriceTrendBadge extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              isUp ? Icons.north_east_rounded : Icons.south_east_rounded,
+              isFlat
+                  ? Icons.east_rounded
+                  : isUp
+                  ? Icons.north_east_rounded
+                  : Icons.south_east_rounded,
               size: 14,
               color: color,
             ),
             const SizedBox(width: 4),
             Flexible(
               child: Text(
-                label ?? (isUp ? 'Above SRP' : 'Below SRP'),
+                label ??
+                    (isFlat
+                        ? 'At SRP'
+                        : isUp
+                        ? 'Above SRP'
+                        : 'Below SRP'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(

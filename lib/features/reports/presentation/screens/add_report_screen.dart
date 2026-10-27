@@ -20,6 +20,9 @@ import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../commodities/data/commodity_repository.dart';
 import '../../../stores/data/store_repository.dart';
 import '../controllers/report_controller.dart';
+import '../../../../shared/widgets/theme_mode_button.dart';
+import '../../../admin/presentation/widgets/admin_page_frame.dart';
+import '../../../../shared/widgets/pricewatch_help.dart';
 
 class AddReportScreen extends StatefulWidget {
   const AddReportScreen({
@@ -63,7 +66,8 @@ class _AddReportScreenState extends State<AddReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final useWebShell = MediaQuery.sizeOf(context).width >= 1024;
+    final useWebShell =
+        MediaQuery.sizeOf(context).width >= adminWebLayoutBreakpoint;
     final reportController = context.watch<ReportController>();
     final theme = Theme.of(context);
     final selectedCommodity = _selectedCommodity;
@@ -76,7 +80,12 @@ class _AddReportScreenState extends State<AddReportScreen> {
           : AppBar(
               leading: const AppShellMenuButton(),
               title: const Text('Report Overpricing'),
-              actions: const [AppNotificationButton(), SizedBox(width: 8)],
+              actions: const [
+                PriceWatchGuideButton(),
+                ThemeModeButton(),
+                AppNotificationButton(),
+                SizedBox(width: 8),
+              ],
             ),
       body: AppBackground(
         showTopGlow: false,
@@ -233,9 +242,9 @@ class _AddReportScreenState extends State<AddReportScreen> {
                                             14,
                                           ),
                                         ),
-                                        child: const Icon(
+                                        child: Icon(
                                           Icons.qr_code_scanner_rounded,
-                                          color: AppColors.primary,
+                                          color: AppColors.accentFor(context),
                                         ),
                                       ),
                                       const SizedBox(width: 12),
@@ -275,6 +284,7 @@ class _AddReportScreenState extends State<AddReportScreen> {
                                 const SizedBox(height: AppSpacing.md),
                               ],
                               DropdownButtonFormField<int>(
+                                isExpanded: true,
                                 initialValue: _commodityId,
                                 decoration: const InputDecoration(
                                   labelText: 'Commodity',
@@ -297,6 +307,7 @@ class _AddReportScreenState extends State<AddReportScreen> {
                               ),
                               const SizedBox(height: AppSpacing.md),
                               DropdownButtonFormField<int>(
+                                isExpanded: true,
                                 initialValue: _storeId,
                                 decoration: const InputDecoration(
                                   labelText: 'Store',

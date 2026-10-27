@@ -19,6 +19,7 @@ import '../../features/commodities/presentation/screens/category_list_screen.dar
 import '../../features/commodities/presentation/screens/commodity_detail_screen.dart';
 import '../../features/commodities/presentation/screens/commodity_list_screen.dart';
 import '../../features/display/presentation/screens/lingayen_market_display_screen.dart';
+import '../../features/home/presentation/screens/buyer_home_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/navigation/presentation/main_navigation_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
@@ -48,7 +49,6 @@ class AppRouter {
               state.matchedLocation == '/login' ||
               state.matchedLocation == '/register' ||
               state.matchedLocation == '/register/vendor';
-          final isAdminRoute = state.matchedLocation.startsWith('/admin');
           final isPublicDisplayRoute =
               isLanding || state.matchedLocation.startsWith('/display');
           final isMainAppShellRoute = _mainAppShellRoutes.contains(
@@ -75,22 +75,35 @@ class AppRouter {
             ).toString();
           }
 
+          final roleHome = useAdminWebWorkspace
+              ? '/admin'
+              : (currentUser?.role == 'user' ? '/home' : '/modules');
+
           if (isAuthRoute || isSplash) {
-            if (_isSafePostAuthRoute(intendedRoute)) {
+            // A 'from' left by the previous account (e.g. an admin page after
+            // an admin logs out) must not leak into another role's session.
+            if (_isSafePostAuthRoute(intendedRoute) &&
+                _roleCanOpen(currentUser?.role, intendedRoute!)) {
               return _resolvePostAuthRoute(
-                intendedRoute!,
+                intendedRoute,
                 useAdminWebWorkspace: useAdminWebWorkspace,
               );
             }
-            return useAdminWebWorkspace ? '/admin' : '/modules';
+            return roleHome;
+          }
+
+          if (!_roleCanOpen(currentUser?.role, state.matchedLocation)) {
+            return roleHome;
+          }
+
+          // Buyers start on Home; the module launcher is for vendors and admins.
+          if (currentUser?.role == 'user' &&
+              state.matchedLocation == '/modules') {
+            return '/home';
           }
 
           if (useAdminWebWorkspace && isMainAppShellRoute) {
             return '/admin';
-          }
-
-          if (isAdminRoute && !(currentUser?.isAdmin ?? false)) {
-            return '/profile';
           }
 
           return null;
@@ -195,7 +208,10 @@ class AppRouter {
                 routes: [
                   GoRoute(
                     path: '/home',
-                    builder: (context, state) => const HomeScreen(),
+                    builder: (context, state) =>
+                        authController.currentUser?.isVendor ?? false
+                        ? const HomeScreen()
+                        : const BuyerHomeScreen(),
                   ),
                 ],
               ),
@@ -350,6 +366,18 @@ class AppRouter {
     }
 
     return _mainAppShellRoutes.contains(location) ? '/admin' : location;
+  }
+
+  /// Admin pages are admin-only and vendor workspace pages are vendor-only.
+  static bool _roleCanOpen(String? role, String location) {
+    final path = Uri.parse(location).path;
+    if (path == '/admin' || path.startsWith('/admin/')) {
+      return role == 'admin';
+    }
+    if (path.startsWith('/vendor/')) {
+      return role == 'vendor';
+    }
+    return true;
   }
 
   static bool _isSafePostAuthRoute(String? location) {
