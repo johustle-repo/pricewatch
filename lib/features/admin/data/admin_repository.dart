@@ -291,8 +291,10 @@ class AdminRepository {
   }
 
   Future<List<StoreModel>> getStores({bool archived = false}) async {
+    final rawRows = await _cloudDataService.getCollection('stores');
+    await _saveFormattedNames('stores', rawRows, 'owner_name');
     final rows =
-        (await _cloudDataService.getCollection('stores'))
+        rawRows
             .map(StoreModel.fromMap)
             .where((item) => item.isArchived == archived)
             .toList()
@@ -301,12 +303,39 @@ class AdminRepository {
   }
 
   Future<List<UserModel>> getUsers() async {
-    final rows =
-        (await _cloudDataService.getCollection(
-            'users',
-          )).map(UserModel.fromMap).toList()
-          ..sort((a, b) => a.fullName.compareTo(b.fullName));
+    final rawRows = await _cloudDataService.getCollection('users');
+    await _saveFormattedNames('users', rawRows, 'full_name');
+    final rows = rawRows.map(UserModel.fromMap).toList()
+      ..sort((a, b) => a.fullName.compareTo(b.fullName));
     return rows;
+  }
+
+  /// Rewrites stored names typed in all lowercase or all caps as
+  /// "Juan Dela Cruz", so screens that read the raw field (shop owners,
+  /// audit logs, older app versions) show them consistently.
+  Future<void> _saveFormattedNames(
+    String collection,
+    List<Map<String, Object?>> rows,
+    String field,
+  ) async {
+    final stale = rows.where((row) {
+      final value = row[field];
+      return value is String &&
+          row['id'] is int &&
+          value != AppFormatters.personName(value);
+    }).toList();
+    if (stale.isEmpty) return;
+    try {
+      await _requireAdmin();
+      for (final row in stale) {
+        await _cloudDataService.setDocument(collection, row['id'] as int, {
+          ...row,
+          field: AppFormatters.personName(row[field] as String),
+        });
+      }
+    } catch (_) {
+      // Non-admins cannot write; they still see formatted names on screen.
+    }
   }
 
   Future<List<Map<String, Object?>>> getAuditLogs({int limit = 20}) async {
@@ -317,7 +346,16 @@ class AdminRepository {
         a['created_at'] as String? ?? '',
       ),
     );
-    return rows.take(limit).toList();
+    return rows
+        .take(limit)
+        .map(
+          (row) => {
+            ...row,
+            if (row['actor_name'] case final String name)
+              'actor_name': AppFormatters.personName(name),
+          },
+        )
+        .toList();
   }
 
   Future<void> saveStore({
@@ -337,7 +375,7 @@ class AdminRepository {
     final store = StoreModel(
       id: targetId,
       name: name.trim(),
-      ownerName: ownerName.trim(),
+      ownerName: AppFormatters.personName(ownerName),
       ownerUserId: ownerUserId,
       marketName: marketName.trim(),
       address: address.trim(),

@@ -1,3 +1,5 @@
+import '../../core/utils/app_formatters.dart';
+
 class StoreModel {
   const StoreModel({
     this.id,
@@ -29,7 +31,10 @@ class StoreModel {
     return StoreModel(
       id: map['id'] as int?,
       name: map['name'] as String,
-      ownerName: map['owner_name'] as String?,
+      ownerName: switch (map['owner_name']) {
+        final String name => AppFormatters.personName(name),
+        _ => null,
+      },
       ownerUserId: map['owner_user_id'] as int?,
       isArchived: map['is_archived'] == true || map['is_archived'] == 1,
       archivedAt: map['archived_at'] as String?,
