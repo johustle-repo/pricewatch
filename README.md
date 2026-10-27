@@ -217,10 +217,76 @@ lib/
     vendor/             Vendor dashboard, products and shop QR
     watchlist/          Watched commodities and price thresholds
   shared/               Shared models and UI widgets
+assets/images/          App logo drafts and the Scrum methodology diagram
 functions/              Firebase callable functions for managed accounts/migration
+samples/                Sample CSV files for the admin import
 scripts/                Web development helper
 test/                   Unit and widget tests
+test_visual/            Screenshot audit of every main screen
+tool/                   Node.js scripts for seeding Firestore data
+features.md             Background of the study and system features
+overview.md             System architecture overview
 ```
+
+## Supporting files
+
+### Documentation
+
+| File | Contents |
+| --- | --- |
+| `features.md` | Background of the study, objectives, scope and limitations, significance, and a feature summary for each role. |
+| `overview.md` | How the system is built: architecture, startup sequence, layers, data model, and security rules. |
+
+### Sample CSV files (`samples/`)
+
+Use these to try the CSV import in **Admin: Manage Prices** and **Admin: Manage Stores**. The store names are placeholders such as `Sample Stall 01`.
+
+| File | Columns | Purpose |
+| --- | --- | --- |
+| `pricewatch_simple_import.csv` | Commodity, PriceList, StoreName | Smallest price import (22 rows); a good first test. |
+| `lingayen_market_prices_2026-08-23.csv`, `lingayen_market_prices_2026-10-14.csv` | Commodity, PriceList, StoreName | Price snapshots on two dates, for testing dated price-increase warnings. |
+| `lingayen_market_prices_higher_2026-08-25.csv` | Commodity, PriceList, StoreName | Higher prices than the 2026-08-23 file, for testing increase alerts. |
+| `lingayen_public_market_prices_sample.csv` | Commodity, PriceList, StoreName | Basic price import sample. |
+| `lingayen_public_market_stores_sample.csv` | StoreName, OwnerName, MarketName, Address, City | Store-directory import sample. |
+| `lingayen_market_monitoring_2026-10-14.csv` | Commodity, PriceList, StoreName, Category, Specification | Full Lingayen market survey (287 rows) with categories and specifications. |
+| `lingayen_market_monitoring_2026-10-14_fixed.csv` | Same as above | The survey with commodity names corrected to match the catalog. Run `tool/add_survey_commodities.js` first so every row imports. |
+| `lingayen_market_monitoring_2026-10-14_retry.csv` | Same as above | The rows that failed on the first import, for re-importing only those. |
+
+### Data tools (`tool/`)
+
+Node.js scripts that sign in as an administrator and write to the `pricewatch-apk` Firestore database. Credentials come from environment variables and are never stored in the scripts.
+
+```powershell
+$env:PRICEWATCH_ADMIN_EMAIL = "admin@example.com"
+$env:PRICEWATCH_ADMIN_PASSWORD = "..."
+node tool/add_survey_commodities.js --dry-run   # preview changes
+node tool/add_survey_commodities.js             # apply them
+```
+
+| Script | Purpose |
+| --- | --- |
+| `add_survey_commodities.js` | Adds the categories and commodities from the October 2026 market survey that are missing in Firestore. Safe to re-run; existing items, matched by name, are kept. |
+| `populate_price_history.js` | Writes simulated price history for analytics: prices near each commodity's SRP at up to three stores, on 14 dates over the past 11 months. Entries are tagged with source `analytics-history-v1` so they can be told apart from real data. It has no dry-run option. |
+
+### Visual audit (`test_visual/`)
+
+`screens_visual_test.dart` renders the real app against an in-memory Firestore and captures every main screen at phone, tablet, and desktop widths in light and dark mode. It logs any layout overflow to `issues.txt` (empty means no overflow was found). The screenshots are saved in `goldens/`.
+
+```bash
+PW_FIXTURE=<fixture.json> PW_FONTS=<folder with Poppins-*.ttf> \
+  flutter test test_visual/screens_visual_test.dart --update-goldens
+```
+
+It is kept outside `test/` so `flutter test` does not run it.
+
+### Images (`assets/images/`)
+
+| File | Contents |
+| --- | --- |
+| `pricewatch_scrum_methodology.png` | Scrum methodology diagram for the project documentation. |
+| `app-logo.png`, `app-logo-new.png`, `ChatGPT Image Oct 14, 2026, 08_02_56 AM.png` | App logo drafts. The logo used in the app is `assets/icons/app_logo.png`. |
+
+`pubspec.yaml` only bundles `assets/icons/`, `assets/images/branding/`, and `assets/images/products/`, so the files above are not included in the app.
 
 ## Setup and run
 
@@ -286,4 +352,4 @@ flutter analyze
 flutter test
 ```
 
-The test suite covers CSV parsing, report export, price-increase comparisons, report-date matching, and selected application/vendor widget layouts.
+The test suite covers CSV parsing, report export, price-increase comparisons, report-date matching, market price summaries, subcategory price summaries, theme persistence, and selected application/vendor widget layouts.

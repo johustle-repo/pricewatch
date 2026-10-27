@@ -1,0 +1,75 @@
+Commodity,PriceList,StoreName,Category,Specification
+Local Well-milled Rice (White tag),54.00,Sample Stall 01,Local Commercial Rice,1-19% bran streak/kg
+Local Well-milled Rice (White tag),52.00,Sample Stall 02,Local Commercial Rice,1-19% bran streak/kg
+Local Well-milled Rice (White tag),46.00,Sample Stall 03,Local Commercial Rice,1-19% bran streak/kg
+Local Well-milled Rice (White tag),48.00,Sample Stall 04,Local Commercial Rice,1-19% bran streak/kg
+Local Well-milled Rice (White tag),44.00,Sample Stall 05,Local Commercial Rice,1-19% bran streak/kg
+Local Special Rice (25 kg bag),1300.00,Sample Stall 01,Local Commercial Rice (25kg),25kg
+Local Special Rice (25 kg bag),1575.00,Sample Stall 02,Local Commercial Rice (25kg),25kg
+Local Special Rice (25 kg bag),1575.00,Sample Stall 03,Local Commercial Rice (25kg),25kg
+Local Special Rice (25 kg bag),1350.00,Sample Stall 04,Local Commercial Rice (25kg),25kg
+Local Special Rice (25 kg bag),1325.00,Sample Stall 05,Local Commercial Rice (25kg),25kg
+Local Premium Rice (25 kg bag),1350.00,Sample Stall 01,Local Commercial Rice (25kg),25kg
+Local Premium Rice (25 kg bag),1375.00,Sample Stall 02,Local Commercial Rice (25kg),25kg
+Local Premium Rice (25 kg bag),1475.00,Sample Stall 03,Local Commercial Rice (25kg),25kg
+Local Well-milled Rice (25 kg bag),1425.00,Sample Stall 01,Local Commercial Rice (25kg),25kg
+Local Well-milled Rice (25 kg bag),1300.00,Sample Stall 02,Local Commercial Rice (25kg),25kg
+Local Well-milled Rice (25 kg bag),1175.00,Sample Stall 03,Local Commercial Rice (25kg),25kg
+Local Well-milled Rice (25 kg bag),1200.00,Sample Stall 04,Local Commercial Rice (25kg),25kg
+Local Well-milled Rice (25 kg bag),950.00,Sample Stall 05,Local Commercial Rice (25kg),25kg
+Local Regular-milled Rice (25 kg bag),790.00,Sample Stall 01,Local Commercial Rice (25kg),25kg
+Galunggong,260.00,Sample Stall 01,Fish,14pcs/kg
+Galunggong,215.00,Sample Stall 02,Fish,14pcs/kg
+Galunggong,300.00,Sample Stall 03,Fish,14pcs/kg
+Galunggong,265.00,Sample Stall 04,Fish,14pcs/kg
+Galunggong,215.00,Sample Stall 05,Fish,14pcs/kg
+Pork Kasim (Ham),355.00,Sample Stall 01,Livestock & Poultry,Kasim
+Pork Kasim (Ham),315.00,Sample Stall 02,Livestock & Poultry,Kasim
+Pork Kasim (Ham),355.00,Sample Stall 03,Livestock & Poultry,Kasim
+Pork Kasim (Ham),355.00,Sample Stall 04,Livestock & Poultry,Kasim
+Pork Kasim (Ham),355.00,Sample Stall 05,Livestock & Poultry,Kasim
+Pork Liempo,375.00,Sample Stall 01,Livestock & Poultry,Liempo
+Pork Liempo,340.00,Sample Stall 02,Livestock & Poultry,Liempo
+Pork Liempo,340.00,Sample Stall 03,Livestock & Poultry,Liempo
+Pork Liempo,330.00,Sample Stall 04,Livestock & Poultry,Liempo
+Pork Liempo,335.00,Sample Stall 05,Livestock & Poultry,Liempo
+Whole Chicken (Fully Dressed),210.00,Sample Stall 01,Livestock & Poultry,Fully Dressed
+Whole Chicken (Fully Dressed),210.00,Sample Stall 02,Livestock & Poultry,Fully Dressed
+Whole Chicken (Fully Dressed),195.00,Sample Stall 03,Livestock & Poultry,Fully Dressed
+Whole Chicken (Fully Dressed),205.00,Sample Stall 04,Livestock & Poultry,Fully Dressed
+Whole Chicken (Fully Dressed),210.00,Sample Stall 05,Livestock & Poultry,Fully Dressed
+Chicken Egg White Pewee (41-45 g),8.25,Sample Stall 01,Livestock & Poultry,41-45 grams/pc
+Chicken Egg White Pewee (41-45 g),7.25,Sample Stall 02,Livestock & Poultry,41-45 grams/pc
+Chicken Egg White Pewee (41-45 g),7.00,Sample Stall 03,Livestock & Poultry,41-45 grams/pc
+Chicken Egg White Pewee (41-45 g),6.75,Sample Stall 04,Livestock & Poultry,41-45 grams/pc
+Chicken Egg White Pewee (41-45 g),7.00,Sample Stall 05,Livestock & Poultry,41-45 grams/pc
+Chicken Egg White Extra Small (46-50 g),8.50,Sample Stall 01,Livestock & Poultry,46-50 grams/pc
+Chicken Egg White Extra Small (46-50 g),8.50,Sample Stall 02,Livestock & Poultry,46-50 grams/pc
+Chicken Egg White Extra Small (46-50 g),8.50,Sample Stall 03,Livestock & Poultry,46-50 grams/pc
+Chicken Egg White Extra Small (46-50 g),7.50,Sample Stall 04,Livestock & Poultry,46-50 grams/pc
+Chicken Egg White Extra Small (46-50 g),8.75,Sample Stall 05,Livestock & Poultry,46-50 grams/pc
+Chicken Egg White Small (51-55 g),7.75,Sample Stall 01,Livestock & Poultry,51-55 grams/pc
+Chicken Egg White Small (51-55 g),8.25,Sample Stall 02,Livestock & Poultry,51-55 grams/pc
+Chicken Egg White Small (51-55 g),9.25,Sample Stall 03,Livestock & Poultry,51-55 grams/pc
+Chicken Egg White Small (51-55 g),9.25,Sample Stall 04,Livestock & Poultry,51-55 grams/pc
+Chicken Egg White Small (51-55 g),9.25,Sample Stall 05,Livestock & Poultry,51-55 grams/pc
+Chicken Egg White Medium (56-60 g),8.00,Sample Stall 01,Livestock & Poultry,56-60 grams/pc
+Chicken Egg White Medium (56-60 g),8.25,Sample Stall 02,Livestock & Poultry,56-60 grams/pc
+Chicken Egg White Medium (56-60 g),8.50,Sample Stall 03,Livestock & Poultry,56-60 grams/pc
+Chicken Egg White Medium (56-60 g),9.50,Sample Stall 04,Livestock & Poultry,56-60 grams/pc
+Chicken Egg White Medium (56-60 g),8.50,Sample Stall 05,Livestock & Poultry,56-60 grams/pc
+Chicken Egg White Large (61-65 g),10.00,Sample Stall 01,Livestock & Poultry,61-65 grams/pc
+Chicken Egg White Large (61-65 g),8.75,Sample Stall 02,Livestock & Poultry,61-65 grams/pc
+Chicken Egg White Large (61-65 g),9.75,Sample Stall 03,Livestock & Poultry,61-65 grams/pc
+Chicken Egg White Large (61-65 g),9.25,Sample Stall 04,Livestock & Poultry,61-65 grams/pc
+Chicken Egg White Large (61-65 g),9.00,Sample Stall 05,Livestock & Poultry,61-65 grams/pc
+Chicken Egg White Extra Large (66-70 g),10.50,Sample Stall 01,Livestock & Poultry,66-70 grams/pc
+Chicken Egg White Extra Large (66-70 g),10.75,Sample Stall 02,Livestock & Poultry,66-70 grams/pc
+Chicken Egg White Extra Large (66-70 g),12.00,Sample Stall 03,Livestock & Poultry,66-70 grams/pc
+Chicken Egg White Extra Large (66-70 g),11.50,Sample Stall 04,Livestock & Poultry,66-70 grams/pc
+Chicken Egg White Extra Large (66-70 g),12.00,Sample Stall 05,Livestock & Poultry,66-70 grams/pc
+Potato,105.00,Sample Stall 01,Highland Vegetables,10-12 pcs/kg
+Potato,90.00,Sample Stall 02,Highland Vegetables,10-12 pcs/kg
+Potato,105.00,Sample Stall 03,Highland Vegetables,10-12 pcs/kg
+Potato,105.00,Sample Stall 04,Highland Vegetables,10-12 pcs/kg
+Potato,110.00,Sample Stall 05,Highland Vegetables,10-12 pcs/kg

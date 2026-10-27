@@ -1,0 +1,288 @@
+Commodity,PriceList,StoreName,Category,Specification
+Imported Special Rice (Blue tag),55.00,Sample Stall 01,Imported Commercial Rice,White Rice/kg
+Imported Special Rice (Blue tag),53.00,Sample Stall 02,Imported Commercial Rice,White Rice/kg
+Imported Premium Rice (Yellow tag),58.00,Sample Stall 01,Imported Commercial Rice,5% broken/kg
+Imported Premium Rice (Yellow tag),60.00,Sample Stall 02,Imported Commercial Rice,5% broken/kg
+Local Special Rice (Blue tag),52.00,Sample Stall 01,Local Commercial Rice,White Rice/kg
+Local Special Rice (Blue tag),65.00,Sample Stall 02,Local Commercial Rice,White Rice/kg
+Local Special Rice (Blue tag),61.00,Sample Stall 03,Local Commercial Rice,White Rice/kg
+Local Special Rice (Blue tag),54.00,Sample Stall 04,Local Commercial Rice,White Rice/kg
+Local Special Rice (Blue tag),64.00,Sample Stall 05,Local Commercial Rice,White Rice/kg
+Local Premium Rice (Yellow tag),59.00,Sample Stall 01,Local Commercial Rice,5% broken/kg
+Local Premium Rice (Yellow tag),58.00,Sample Stall 02,Local Commercial Rice,5% broken/kg
+Local Premium Rice (Yellow tag),50.00,Sample Stall 03,Local Commercial Rice,5% broken/kg
+Local Well Milled Rice (White tag),54.00,Sample Stall 01,Local Commercial Rice,1-19% bran streak/kg
+Local Well Milled Rice (White tag),52.00,Sample Stall 02,Local Commercial Rice,1-19% bran streak/kg
+Local Well Milled Rice (White tag),46.00,Sample Stall 03,Local Commercial Rice,1-19% bran streak/kg
+Local Well Milled Rice (White tag),48.00,Sample Stall 04,Local Commercial Rice,1-19% bran streak/kg
+Local Well Milled Rice (White tag),44.00,Sample Stall 05,Local Commercial Rice,1-19% bran streak/kg
+Local Regular Milled Rice (White tag),36.00,Sample Stall 01,Local Commercial Rice,20-40% bran streak/kg
+Special Rice 25kg (Blue tag),1300.00,Sample Stall 01,Local Commercial Rice (25kg),25kg
+Special Rice 25kg (Blue tag),1575.00,Sample Stall 02,Local Commercial Rice (25kg),25kg
+Special Rice 25kg (Blue tag),1575.00,Sample Stall 03,Local Commercial Rice (25kg),25kg
+Special Rice 25kg (Blue tag),1350.00,Sample Stall 04,Local Commercial Rice (25kg),25kg
+Special Rice 25kg (Blue tag),1325.00,Sample Stall 05,Local Commercial Rice (25kg),25kg
+Premium Rice 25kg (Yellow tag),1350.00,Sample Stall 01,Local Commercial Rice (25kg),25kg
+Premium Rice 25kg (Yellow tag),1375.00,Sample Stall 02,Local Commercial Rice (25kg),25kg
+Premium Rice 25kg (Yellow tag),1475.00,Sample Stall 03,Local Commercial Rice (25kg),25kg
+Well Milled Rice 25kg (White tag),1425.00,Sample Stall 01,Local Commercial Rice (25kg),25kg
+Well Milled Rice 25kg (White tag),1300.00,Sample Stall 02,Local Commercial Rice (25kg),25kg
+Well Milled Rice 25kg (White tag),1175.00,Sample Stall 03,Local Commercial Rice (25kg),25kg
+Well Milled Rice 25kg (White tag),1200.00,Sample Stall 04,Local Commercial Rice (25kg),25kg
+Well Milled Rice 25kg (White tag),950.00,Sample Stall 05,Local Commercial Rice (25kg),25kg
+Regular Milled Rice 25kg (White tag),790.00,Sample Stall 01,Local Commercial Rice (25kg),25kg
+Bangus (Large),290.00,Sample Stall 01,Fish,Large/kg
+Bangus (Large),250.00,Sample Stall 02,Fish,Large/kg
+Bangus (Large),220.00,Sample Stall 03,Fish,Large/kg
+Bangus (Large),230.00,Sample Stall 04,Fish,Large/kg
+Bangus (Large),215.00,Sample Stall 05,Fish,Large/kg
+Bangus (Medium),235.00,Sample Stall 01,Fish,Medium (3-4pcs/kg)
+Bangus (Medium),210.00,Sample Stall 02,Fish,Medium (3-4pcs/kg)
+Bangus (Medium),195.00,Sample Stall 03,Fish,Medium (3-4pcs/kg)
+Bangus (Medium),215.00,Sample Stall 04,Fish,Medium (3-4pcs/kg)
+Bangus (Medium),235.00,Sample Stall 05,Fish,Medium (3-4pcs/kg)
+Tilapia,130.00,Sample Stall 01,Fish,Medium (5-6pcs/kg)
+Tilapia,140.00,Sample Stall 02,Fish,Medium (5-6pcs/kg)
+Tilapia,155.00,Sample Stall 03,Fish,Medium (5-6pcs/kg)
+Tilapia,145.00,Sample Stall 04,Fish,Medium (5-6pcs/kg)
+Tilapia,130.00,Sample Stall 05,Fish,Medium (5-6pcs/kg)
+Galunggong (Local),260.00,Sample Stall 01,Fish,14pcs/kg
+Galunggong (Local),215.00,Sample Stall 02,Fish,14pcs/kg
+Galunggong (Local),300.00,Sample Stall 03,Fish,14pcs/kg
+Galunggong (Local),265.00,Sample Stall 04,Fish,14pcs/kg
+Galunggong (Local),215.00,Sample Stall 05,Fish,14pcs/kg
+Galunggong (Imported),305.00,Sample Stall 01,Fish,14pcs/kg
+Galunggong (Imported),315.00,Sample Stall 02,Fish,14pcs/kg
+Bonito,165.00,Sample Stall 01,Fish,kg
+Bonito,195.00,Sample Stall 02,Fish,kg
+Bonito,165.00,Sample Stall 03,Fish,kg
+Bonito,170.00,Sample Stall 04,Fish,kg
+Bonito,165.00,Sample Stall 05,Fish,kg
+Sardines (Tamban),440.00,Sample Stall 01,Fish,kg
+Sardines (Tamban),420.00,Sample Stall 02,Fish,kg
+Yellow-Fin Tuna (Tambakol),230.00,Sample Stall 01,Fish,kg
+Yellow-Fin Tuna (Tambakol),235.00,Sample Stall 02,Fish,kg
+Yellow-Fin Tuna (Tambakol),215.00,Sample Stall 03,Fish,kg
+Beef Rump,440.00,Sample Stall 01,Livestock & Poultry,Lean Meat/Tapadera
+Beef Rump,410.00,Sample Stall 02,Livestock & Poultry,Lean Meat/Tapadera
+Beef Rump,490.00,Sample Stall 03,Livestock & Poultry,Lean Meat/Tapadera
+Beef Rump,485.00,Sample Stall 04,Livestock & Poultry,Lean Meat/Tapadera
+Beef Rump,480.00,Sample Stall 05,Livestock & Poultry,Lean Meat/Tapadera
+Beef Brisket,390.00,Sample Stall 01,Livestock & Poultry,Meat with Bones
+Beef Brisket,420.00,Sample Stall 02,Livestock & Poultry,Meat with Bones
+Beef Brisket,360.00,Sample Stall 03,Livestock & Poultry,Meat with Bones
+Beef Brisket,380.00,Sample Stall 04,Livestock & Poultry,Meat with Bones
+Beef Brisket,370.00,Sample Stall 05,Livestock & Poultry,Meat with Bones
+Pork Ham,355.00,Sample Stall 01,Livestock & Poultry,Kasim
+Pork Ham,315.00,Sample Stall 02,Livestock & Poultry,Kasim
+Pork Ham,355.00,Sample Stall 03,Livestock & Poultry,Kasim
+Pork Ham,355.00,Sample Stall 04,Livestock & Poultry,Kasim
+Pork Ham,355.00,Sample Stall 05,Livestock & Poultry,Kasim
+Pork Belly,375.00,Sample Stall 01,Livestock & Poultry,Liempo
+Pork Belly,340.00,Sample Stall 02,Livestock & Poultry,Liempo
+Pork Belly,340.00,Sample Stall 03,Livestock & Poultry,Liempo
+Pork Belly,330.00,Sample Stall 04,Livestock & Poultry,Liempo
+Pork Belly,335.00,Sample Stall 05,Livestock & Poultry,Liempo
+Whole Chicken,210.00,Sample Stall 01,Livestock & Poultry,Fully Dressed
+Whole Chicken,210.00,Sample Stall 02,Livestock & Poultry,Fully Dressed
+Whole Chicken,195.00,Sample Stall 03,Livestock & Poultry,Fully Dressed
+Whole Chicken,205.00,Sample Stall 04,Livestock & Poultry,Fully Dressed
+Whole Chicken,210.00,Sample Stall 05,Livestock & Poultry,Fully Dressed
+"Chicken Egg (White, Pewee)",8.25,Sample Stall 01,Livestock & Poultry,41-45 grams/pc
+"Chicken Egg (White, Pewee)",7.25,Sample Stall 02,Livestock & Poultry,41-45 grams/pc
+"Chicken Egg (White, Pewee)",7.00,Sample Stall 03,Livestock & Poultry,41-45 grams/pc
+"Chicken Egg (White, Pewee)",6.75,Sample Stall 04,Livestock & Poultry,41-45 grams/pc
+"Chicken Egg (White, Pewee)",7.00,Sample Stall 05,Livestock & Poultry,41-45 grams/pc
+"Chicken Egg (White, Extra Small)",8.50,Sample Stall 01,Livestock & Poultry,46-50 grams/pc
+"Chicken Egg (White, Extra Small)",8.50,Sample Stall 02,Livestock & Poultry,46-50 grams/pc
+"Chicken Egg (White, Extra Small)",8.50,Sample Stall 03,Livestock & Poultry,46-50 grams/pc
+"Chicken Egg (White, Extra Small)",7.50,Sample Stall 04,Livestock & Poultry,46-50 grams/pc
+"Chicken Egg (White, Extra Small)",8.75,Sample Stall 05,Livestock & Poultry,46-50 grams/pc
+"Chicken Egg (White, Small)",7.75,Sample Stall 01,Livestock & Poultry,51-55 grams/pc
+"Chicken Egg (White, Small)",8.25,Sample Stall 02,Livestock & Poultry,51-55 grams/pc
+"Chicken Egg (White, Small)",9.25,Sample Stall 03,Livestock & Poultry,51-55 grams/pc
+"Chicken Egg (White, Small)",9.25,Sample Stall 04,Livestock & Poultry,51-55 grams/pc
+"Chicken Egg (White, Small)",9.25,Sample Stall 05,Livestock & Poultry,51-55 grams/pc
+"Chicken Egg (White, Medium)",8.00,Sample Stall 01,Livestock & Poultry,56-60 grams/pc
+"Chicken Egg (White, Medium)",8.25,Sample Stall 02,Livestock & Poultry,56-60 grams/pc
+"Chicken Egg (White, Medium)",8.50,Sample Stall 03,Livestock & Poultry,56-60 grams/pc
+"Chicken Egg (White, Medium)",9.50,Sample Stall 04,Livestock & Poultry,56-60 grams/pc
+"Chicken Egg (White, Medium)",8.50,Sample Stall 05,Livestock & Poultry,56-60 grams/pc
+"Chicken Egg (White, Large)",10.00,Sample Stall 01,Livestock & Poultry,61-65 grams/pc
+"Chicken Egg (White, Large)",8.75,Sample Stall 02,Livestock & Poultry,61-65 grams/pc
+"Chicken Egg (White, Large)",9.75,Sample Stall 03,Livestock & Poultry,61-65 grams/pc
+"Chicken Egg (White, Large)",9.25,Sample Stall 04,Livestock & Poultry,61-65 grams/pc
+"Chicken Egg (White, Large)",9.00,Sample Stall 05,Livestock & Poultry,61-65 grams/pc
+"Chicken Egg (White, Extra Large)",10.50,Sample Stall 01,Livestock & Poultry,66-70 grams/pc
+"Chicken Egg (White, Extra Large)",10.75,Sample Stall 02,Livestock & Poultry,66-70 grams/pc
+"Chicken Egg (White, Extra Large)",12.00,Sample Stall 03,Livestock & Poultry,66-70 grams/pc
+"Chicken Egg (White, Extra Large)",11.50,Sample Stall 04,Livestock & Poultry,66-70 grams/pc
+"Chicken Egg (White, Extra Large)",12.00,Sample Stall 05,Livestock & Poultry,66-70 grams/pc
+Ampalaya,74.00,Sample Stall 01,Lowland Vegetables,4-5 pcs/kg
+Ampalaya,105.00,Sample Stall 02,Lowland Vegetables,4-5 pcs/kg
+Ampalaya,95.00,Sample Stall 03,Lowland Vegetables,4-5 pcs/kg
+Ampalaya,105.00,Sample Stall 04,Lowland Vegetables,4-5 pcs/kg
+Ampalaya,74.00,Sample Stall 05,Lowland Vegetables,4-5 pcs/kg
+Sitao,75.00,Sample Stall 01,Lowland Vegetables,3-4 small bundles/kg
+Sitao,75.00,Sample Stall 02,Lowland Vegetables,3-4 small bundles/kg
+Sitao,76.00,Sample Stall 03,Lowland Vegetables,3-4 small bundles/kg
+Sitao,84.00,Sample Stall 04,Lowland Vegetables,3-4 small bundles/kg
+Sitao,65.00,Sample Stall 05,Lowland Vegetables,3-4 small bundles/kg
+Pechay (Native),95.00,Sample Stall 01,Lowland Vegetables,3-4 small bundles/kg
+Pechay (Native),95.00,Sample Stall 02,Lowland Vegetables,3-4 small bundles/kg
+Pechay (Native),105.00,Sample Stall 03,Lowland Vegetables,3-4 small bundles/kg
+Pechay (Native),95.00,Sample Stall 04,Lowland Vegetables,3-4 small bundles/kg
+Pechay (Native),95.00,Sample Stall 05,Lowland Vegetables,3-4 small bundles/kg
+Squash,47.00,Sample Stall 01,Lowland Vegetables,Suprema variety
+Squash,48.00,Sample Stall 02,Lowland Vegetables,Suprema variety
+Squash,45.00,Sample Stall 03,Lowland Vegetables,Suprema variety
+Squash,53.00,Sample Stall 04,Lowland Vegetables,Suprema variety
+Squash,52.00,Sample Stall 05,Lowland Vegetables,Suprema variety
+Eggplant,54.00,Sample Stall 01,Lowland Vegetables,3-4 small bundles/kg
+Eggplant,64.00,Sample Stall 02,Lowland Vegetables,3-4 small bundles/kg
+Eggplant,62.00,Sample Stall 03,Lowland Vegetables,3-4 small bundles/kg
+Eggplant,62.00,Sample Stall 04,Lowland Vegetables,3-4 small bundles/kg
+Eggplant,65.00,Sample Stall 05,Lowland Vegetables,3-4 small bundles/kg
+Tomato,73.00,Sample Stall 01,Lowland Vegetables,15-18 pcs/kg
+Tomato,65.00,Sample Stall 02,Lowland Vegetables,15-18 pcs/kg
+Tomato,58.00,Sample Stall 03,Lowland Vegetables,15-18 pcs/kg
+Tomato,66.00,Sample Stall 04,Lowland Vegetables,15-18 pcs/kg
+Tomato,65.00,Sample Stall 05,Lowland Vegetables,15-18 pcs/kg
+Okra,87.00,Sample Stall 01,Lowland Vegetables,kg
+Okra,84.00,Sample Stall 02,Lowland Vegetables,kg
+Okra,87.00,Sample Stall 03,Lowland Vegetables,kg
+Okra,77.00,Sample Stall 04,Lowland Vegetables,kg
+Okra,83.00,Sample Stall 05,Lowland Vegetables,kg
+Bell Pepper (Green),115.00,Sample Stall 01,Highland Vegetables,Medium (151-250gm/pc)
+Bell Pepper (Green),150.00,Sample Stall 02,Highland Vegetables,Medium (151-250gm/pc)
+Bell Pepper (Green),150.00,Sample Stall 03,Highland Vegetables,Medium (151-250gm/pc)
+Bell Pepper (Red),115.00,Sample Stall 01,Highland Vegetables,Medium (151-250gm/pc)
+Bell Pepper (Red),150.00,Sample Stall 02,Highland Vegetables,Medium (151-250gm/pc)
+Bell Pepper (Red),150.00,Sample Stall 03,Highland Vegetables,Medium (151-250gm/pc)
+Broccoli,180.00,Sample Stall 01,Highland Vegetables,diameter/bunch hd
+Cabbage (Wonder Ball),160.00,Sample Stall 01,Highland Vegetables,510 gm - 1 kg/head
+Cabbage (Wonder Ball),155.00,Sample Stall 02,Highland Vegetables,510 gm - 1 kg/head
+Cabbage (Wonder Ball),125.00,Sample Stall 03,Highland Vegetables,510 gm - 1 kg/head
+Cabbage (Wonder Ball),145.00,Sample Stall 04,Highland Vegetables,510 gm - 1 kg/head
+Cabbage (Wonder Ball),165.00,Sample Stall 05,Highland Vegetables,510 gm - 1 kg/head
+Carrots,110.00,Sample Stall 01,Highland Vegetables,8-10 pcs/kg
+Carrots,120.00,Sample Stall 02,Highland Vegetables,8-10 pcs/kg
+Carrots,105.00,Sample Stall 03,Highland Vegetables,8-10 pcs/kg
+Carrots,105.00,Sample Stall 04,Highland Vegetables,8-10 pcs/kg
+Carrots,105.00,Sample Stall 05,Highland Vegetables,8-10 pcs/kg
+Habichuelas (Baguio Beans),130.00,Sample Stall 01,Highland Vegetables,kg
+Habichuelas (Baguio Beans),155.00,Sample Stall 02,Highland Vegetables,kg
+Habichuelas (Baguio Beans),115.00,Sample Stall 03,Highland Vegetables,kg
+Habichuelas (Baguio Beans),165.00,Sample Stall 04,Highland Vegetables,kg
+Habichuelas (Baguio Beans),110.00,Sample Stall 05,Highland Vegetables,kg
+White Potato,105.00,Sample Stall 01,Highland Vegetables,10-12 pcs/kg
+White Potato,90.00,Sample Stall 02,Highland Vegetables,10-12 pcs/kg
+White Potato,105.00,Sample Stall 03,Highland Vegetables,10-12 pcs/kg
+White Potato,105.00,Sample Stall 04,Highland Vegetables,10-12 pcs/kg
+White Potato,110.00,Sample Stall 05,Highland Vegetables,10-12 pcs/kg
+Pechay (Baguio),145.00,Sample Stall 01,Highland Vegetables,kg
+Pechay (Baguio),165.00,Sample Stall 02,Highland Vegetables,kg
+Pechay (Baguio),185.00,Sample Stall 03,Highland Vegetables,kg
+Pechay (Baguio),165.00,Sample Stall 04,Highland Vegetables,kg
+Pechay (Baguio),145.00,Sample Stall 05,Highland Vegetables,kg
+Chayote,76.00,Sample Stall 01,Highland Vegetables,Medium (301-400 g)
+Chayote,72.00,Sample Stall 02,Highland Vegetables,Medium (301-400 g)
+Chayote,64.00,Sample Stall 03,Highland Vegetables,Medium (301-400 g)
+Chayote,75.00,Sample Stall 04,Highland Vegetables,Medium (301-400 g)
+Chayote,86.00,Sample Stall 05,Highland Vegetables,Medium (301-400 g)
+Cauliflower,215.00,Sample Stall 01,Highland Vegetables,diameter/bunch hd
+Cauliflower,375.00,Sample Stall 02,Highland Vegetables,diameter/bunch hd
+Celery,285.00,Sample Stall 01,Highland Vegetables,Medium (501-800 g)
+Celery,270.00,Sample Stall 02,Highland Vegetables,Medium (501-800 g)
+Red Onion (Imported),135.00,Sample Stall 01,Spices,kg
+Red Onion (Imported),110.00,Sample Stall 02,Spices,kg
+Red Onion (Imported),90.00,Sample Stall 03,Spices,kg
+Red Onion (Imported),95.00,Sample Stall 04,Spices,kg
+Red Onion (Imported),110.00,Sample Stall 05,Spices,kg
+White Onion (Imported),90.00,Sample Stall 01,Spices,kg
+White Onion (Imported),130.00,Sample Stall 02,Spices,kg
+White Onion (Imported),130.00,Sample Stall 03,Spices,kg
+White Onion (Imported),105.00,Sample Stall 04,Spices,kg
+White Onion (Imported),115.00,Sample Stall 05,Spices,kg
+Garlic (Imported),110.00,Sample Stall 01,Spices,kg
+Garlic (Imported),125.00,Sample Stall 02,Spices,kg
+Garlic (Imported),180.00,Sample Stall 03,Spices,kg
+Garlic (Imported),185.00,Sample Stall 04,Spices,kg
+Garlic (Imported),110.00,Sample Stall 05,Spices,kg
+Ginger,145.00,Sample Stall 01,Spices,kg
+Ginger,180.00,Sample Stall 02,Spices,kg
+Ginger,180.00,Sample Stall 03,Spices,kg
+Ginger,100.00,Sample Stall 04,Spices,kg
+Ginger,150.00,Sample Stall 05,Spices,kg
+Chilli (Taiwan),170.00,Sample Stall 01,Spices,kg
+Chilli (Taiwan),185.00,Sample Stall 02,Spices,kg
+Chilli (Taiwan),185.00,Sample Stall 03,Spices,kg
+Chilli (Taiwan),165.00,Sample Stall 04,Spices,kg
+Chilli (Taiwan),165.00,Sample Stall 05,Spices,kg
+Chilli (Panigang),170.00,Sample Stall 01,Spices,kg
+Chilli (Panigang),185.00,Sample Stall 02,Spices,kg
+Chilli (Panigang),190.00,Sample Stall 03,Spices,kg
+Chilli (Panigang),165.00,Sample Stall 04,Spices,kg
+Chilli (Panigang),155.00,Sample Stall 05,Spices,kg
+Calamansi,73.00,Sample Stall 01,Fruits,kg
+Calamansi,85.00,Sample Stall 02,Fruits,kg
+Calamansi,75.00,Sample Stall 03,Fruits,kg
+Calamansi,74.00,Sample Stall 04,Fruits,kg
+Calamansi,77.00,Sample Stall 05,Fruits,kg
+Banana (Lakatan),86.00,Sample Stall 01,Fruits,8-10 pcs/kg
+Banana (Lakatan),94.00,Sample Stall 02,Fruits,8-10 pcs/kg
+Banana (Lakatan),95.00,Sample Stall 03,Fruits,8-10 pcs/kg
+Banana (Lakatan),85.00,Sample Stall 04,Fruits,8-10 pcs/kg
+Banana (Lakatan),87.00,Sample Stall 05,Fruits,8-10 pcs/kg
+Banana (Latundan),85.00,Sample Stall 01,Fruits,10-12 pcs/kg
+Banana (Latundan),55.00,Sample Stall 02,Fruits,10-12 pcs/kg
+Banana (Latundan),67.00,Sample Stall 03,Fruits,10-12 pcs/kg
+Banana (Saba),64.00,Sample Stall 01,Fruits,kg
+Banana (Saba),56.00,Sample Stall 02,Fruits,kg
+Banana (Saba),52.00,Sample Stall 03,Fruits,kg
+Banana (Saba),45.00,Sample Stall 04,Fruits,kg
+Banana (Saba),63.00,Sample Stall 05,Fruits,kg
+Mango Carabao (Ripe),295.00,Sample Stall 01,Fruits,3-4 pcs/kg
+Mango Carabao (Ripe),280.00,Sample Stall 02,Fruits,3-4 pcs/kg
+Mango Carabao (Green),265.00,Sample Stall 01,Fruits,3-4 pcs/kg
+Mango Carabao (Green),295.00,Sample Stall 02,Fruits,3-4 pcs/kg
+Watermelon,76.00,Sample Stall 01,Fruits,kg
+Watermelon,77.00,Sample Stall 02,Fruits,kg
+Watermelon,88.00,Sample Stall 03,Fruits,kg
+Watermelon,63.00,Sample Stall 04,Fruits,kg
+Watermelon,63.00,Sample Stall 05,Fruits,kg
+Sugar (Refined),76.00,Sample Stall 01,Other Basic Commodities,kg
+Sugar (Refined),73.00,Sample Stall 02,Other Basic Commodities,kg
+Sugar (Refined),87.00,Sample Stall 03,Other Basic Commodities,kg
+Sugar (Refined),77.00,Sample Stall 04,Other Basic Commodities,kg
+Sugar (Refined),75.00,Sample Stall 05,Other Basic Commodities,kg
+Sugar (Washed),82.00,Sample Stall 01,Other Basic Commodities,kg
+Sugar (Washed),78.00,Sample Stall 02,Other Basic Commodities,kg
+Sugar (Washed),80.00,Sample Stall 03,Other Basic Commodities,kg
+Sugar (Washed),77.00,Sample Stall 04,Other Basic Commodities,kg
+Sugar (Washed),80.00,Sample Stall 05,Other Basic Commodities,kg
+Sugar (Brown),73.00,Sample Stall 01,Other Basic Commodities,kg
+Sugar (Brown),63.00,Sample Stall 02,Other Basic Commodities,kg
+Sugar (Brown),68.00,Sample Stall 03,Other Basic Commodities,kg
+Sugar (Brown),75.00,Sample Stall 04,Other Basic Commodities,kg
+Sugar (Brown),64.00,Sample Stall 05,Other Basic Commodities,kg
+Cooking Oil (Palm) 350ml,36.00,Sample Stall 01,Other Basic Commodities,350 ml
+Cooking Oil (Palm) 350ml,43.00,Sample Stall 02,Other Basic Commodities,350 ml
+Cooking Oil (Palm) 350ml,37.00,Sample Stall 03,Other Basic Commodities,350 ml
+Cooking Oil (Palm) 350ml,37.00,Sample Stall 04,Other Basic Commodities,350 ml
+Cooking Oil (Palm) 350ml,41.00,Sample Stall 05,Other Basic Commodities,350 ml
+Cooking Oil (Palm) 1L,91.00,Sample Stall 01,Other Basic Commodities,1L
+Cooking Oil (Palm) 1L,81.00,Sample Stall 02,Other Basic Commodities,1L
+Cooking Oil (Palm) 1L,78.00,Sample Stall 03,Other Basic Commodities,1L
+Cooking Oil (Palm) 1L,81.00,Sample Stall 04,Other Basic Commodities,1L
+Cooking Oil (Palm) 1L,81.00,Sample Stall 05,Other Basic Commodities,1L
+Cooking Oil (Coconut) 350ml,64.00,Sample Stall 01,Other Basic Commodities,350 ml
+Cooking Oil (Coconut) 350ml,56.00,Sample Stall 02,Other Basic Commodities,350 ml
+Cooking Oil (Coconut) 350ml,56.00,Sample Stall 03,Other Basic Commodities,350 ml
+Cooking Oil (Coconut) 350ml,55.00,Sample Stall 04,Other Basic Commodities,350 ml
+Cooking Oil (Coconut) 350ml,56.00,Sample Stall 05,Other Basic Commodities,350 ml
+Cooking Oil (Coconut) 1L,135.00,Sample Stall 01,Other Basic Commodities,1L
+Cooking Oil (Coconut) 1L,140.00,Sample Stall 02,Other Basic Commodities,1L
+Cooking Oil (Coconut) 1L,155.00,Sample Stall 03,Other Basic Commodities,1L
+Cooking Oil (Coconut) 1L,160.00,Sample Stall 04,Other Basic Commodities,1L
+Cooking Oil (Coconut) 1L,140.00,Sample Stall 05,Other Basic Commodities,1L
