@@ -363,17 +363,20 @@ class ProfileScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                    AppPrimaryButton(
-                      label: 'Logout',
-                      icon: Icons.logout_rounded,
-                      onPressed: () async {
-                        await context.read<AuthController>().logout();
-                        if (context.mounted) {
-                          context.go('/login');
-                        }
-                      },
-                    ),
+                    // The vendor web sidebar already provides a logout action.
+                    if (!(user.isVendor && useWebShell)) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      AppPrimaryButton(
+                        label: 'Logout',
+                        icon: Icons.logout_rounded,
+                        onPressed: () async {
+                          await context.read<AuthController>().logout();
+                          if (context.mounted) {
+                            context.go('/login');
+                          }
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),

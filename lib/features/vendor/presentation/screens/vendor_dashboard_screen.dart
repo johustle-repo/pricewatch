@@ -605,6 +605,7 @@ class _Hero extends StatelessWidget {
             width: 160,
             child: OutlinedButton.icon(
               onPressed: onRefresh,
+              style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Refresh'),
             ),

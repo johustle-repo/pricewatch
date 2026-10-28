@@ -288,6 +288,7 @@ class _PrintControls extends StatelessWidget {
                     }
                   }
                 : null,
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
             icon: const Icon(Icons.copy_rounded),
             label: const Text('Copy QR reference'),
           ),
